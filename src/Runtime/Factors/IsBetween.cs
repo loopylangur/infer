@@ -939,24 +939,58 @@ namespace Microsoft.ML.Probabilistic.Factors
                     double beta2 = invSqrtVxl * invSqrtVxl * MMath.NormalCdfRatio(yuryl) * Math.Exp(-logZRatio) * (MMath.NormalCdfRatio(yuryl) * Math.Exp(-logZRatio) + yl);
                     double Ryuryl = MMath.NormalCdfRatio(yuryl);
                     double u = Ryuryl * (Ryuryl * Math.Exp(-logZRatio) + yl) + r / Math.Sqrt(omr2);
-                    // this is exact when yuryl < -1e4
-                    double Ryuryl2 = -1/yuryl + 1/(yuryl*yuryl*yuryl);
                     double ylryu = (yl - r * yu) / Math.Sqrt(omr2);
                     double Rylryu = MMath.NormalCdfRatio(ylryu);
                     double logZRatio2 = Math.Log((r * Rylryu + Ryuryl) / (-yl));
                     //double logZRatio3 = Math.Log(((r * Rylryu + Ryuryl)*yl + r*Math.Sqrt(omr2)*MMath.NormalCdfMomentRatio(1, ylryu)) / (yl*yl + 1) / (-1));
-                    double logZRatio3 = Math.Log(((r * Rylryu + Ryuryl) * yl + r * Math.Sqrt(omr2) * (ylryu*Rylryu + 1)) / (yl * yl + 1) / (-1));
-                    Trace.WriteLine($"logZRatio = {logZRatio} {logZRatio2} {logZRatio3} {Math.Exp(-logZRatio)} {Math.Exp(-logZRatio2)} {Math.Exp(-logZRatio3)}");
+                    double logZRatio3 = Math.Log(((r * Rylryu + Ryuryl) * yl + r * Math.Sqrt(omr2) * (ylryu * Rylryu + 1)) / (yl * yl + 1) / (-1));
+                    double logZRatio4 = Math.Log((Ryuryl * yl + 2 * r * yl * Rylryu - r * r * yu * Rylryu + r * Math.Sqrt(omr2)) / (yl * yl + 1) / (-1));
+                    //Trace.WriteLine($"logZRatio = {logZRatio} {logZRatio2} {logZRatio3} {logZRatio4} {Math.Exp(-logZRatio)} {Math.Exp(-logZRatio3)} {Math.Exp(-logZRatio4)} {-1/Math.Sqrt(omr2)/Ryuryl/Rylryu}");
                     double u2 = Ryuryl * (Ryuryl * Math.Exp(-logZRatio3) + yl) + r / Math.Sqrt(omr2);
-                    double u3 = Ryuryl * (-Ryuryl * yl / (r * Rylryu + Ryuryl) + yl) + r / Math.Sqrt(omr2);
+                    double u3 = Ryuryl * (-Ryuryl * (yl * yl + 1) / ((r * Rylryu + Ryuryl) * yl + r * Math.Sqrt(omr2) * (ylryu * Rylryu + 1)) + yl) + r / Math.Sqrt(omr2);
+                    double u4 = Ryuryl * (-Ryuryl + r * Rylryu * yl * yl + yl * r * Math.Sqrt(omr2) * (ylryu * Rylryu + 1)) / ((r * Rylryu + Ryuryl) * yl + r * Math.Sqrt(omr2) * (ylryu * Rylryu + 1)) + r / Math.Sqrt(omr2);
+                    // r*yl / (r/Ryuryl + 1/Rylryu) =approx -r*yl/(r*yuryl + ylryu) = -r*yl*Math.Sqrt(omr2)/(r*(yu-r*yl) + (yl-r*yu))
+                    // = -r*Math.Sqrt(omr2)/(1-r*r) = -r/Math.Sqrt(omr2)
+                    // r*yuryl + ylryu = yl*sqrtomr2
+                    // yuryl = (R2 - 1)/Ryuryl
+                    // r/sqrtomr2 = r*yl/(r*yuryl + ylryu) = r*yl/(r*(R2yuryl - 1)/Ryuryl + (R2ylryu - 1)/Rylryu)
+                    // = r*yl*Ryuryl*Rylryu/(r*(R2yuryl - 1)*Rylryu + (R2ylryu - 1)*Ryuryl)
+                    // yl*ZRatio = -(r * Rylryu + Ryuryl) + q
+                    // q =approx r * Math.Sqrt(omr2) * R2ylryu * yl / (yl * yl + 1)
+                    double q = Math.Exp(logZRatio) * yl + (r * Rylryu + Ryuryl);
+                    u3 = Ryuryl * (q - r * Rylryu) * Math.Exp(-logZRatio) + r / Math.Sqrt(omr2);
+                    double R2yuryl = MMath.NormalCdfMomentRatio(1, yuryl);
+                    double R2ylryu = MMath.NormalCdfMomentRatio(1, ylryu);
+                    double w = r * R2yuryl * Rylryu + R2ylryu * Ryuryl;
+                    u4 = Ryuryl * (q - r * Rylryu) * Math.Exp(-logZRatio) + r * yl * Ryuryl * Rylryu / (w - (r * Rylryu + Ryuryl));
+                    u4 = Ryuryl * (q - r * Rylryu + r * yl * Rylryu * Math.Exp(logZRatio) / (w - (r * Rylryu + Ryuryl))) * Math.Exp(-logZRatio);
+                    u4 = Ryuryl * (q - r * Rylryu + r * Rylryu * (q - r * Rylryu - Ryuryl) / (w - (r * Rylryu + Ryuryl))) * Math.Exp(-logZRatio);
+                    u4 = Ryuryl * (q + r * Rylryu * (q - w) / (w - (r * Rylryu + Ryuryl))) * Math.Exp(-logZRatio);
+                    u4 = Ryuryl * (q * (w - Ryuryl) - r * Rylryu * w) / (w - (r * Rylryu + Ryuryl)) * Math.Exp(-logZRatio);
+                    double q2 = -r * Math.Sqrt(omr2) * R2ylryu / yl / (1 + 1 / (yl * yl));
+                    q2 += -(r * Rylryu + Ryuryl) * (1 / (1 + 1 / (yl * yl)) - 1);
+                    // 1 / (1 + 1 / (yl * yl)) - 1 = (yl*yl)/(yl*yl+1) - 1 = -1/(1 + yl*yl)
+                    // (w - (r * Rylryu + Ryuryl)) / (w - (r * Rylryu + Ryuryl)) = 1
+                    // r*Rylryu / (w - (r * Rylryu + Ryuryl)) = (w - Ryuryl) / (w - (r * Rylryu + Ryuryl)) - 1
+                    // Math.Exp(-logZRatio) -> -yl/(r * Rylryu + Ryuryl) -> -1/sqrtomr2/Ryuryl/Rylryu
+                    // assume that uu/(vx+vl)/ZRatio^2 -> 1/vl
+                    // then uu -> (vx/vl + 1)*ZRatio^2
+                    double uu = Ryuryl * (q * (w - Ryuryl) - r * Rylryu * w) / (w - (r * Rylryu + Ryuryl));
+                    double uu2 = (lowerBound.Precision / X.Precision + 1) * omr2 * (Ryuryl * Rylryu * Ryuryl * Rylryu);
+                    // solve for q
+                    double q3 = (uu2 * (w - (r * Rylryu + Ryuryl)) / Ryuryl + r * Rylryu * w) / (w - Ryuryl);
+                    // limit w->0
+                    q3 = uu2 * (r * Rylryu + Ryuryl) / Ryuryl / Ryuryl;
+                    //Trace.WriteLine($"uu = {uu} {uu2}");
 
                     double logPhiR = GetLogPhiR(X, lowerBound, upperBound, yl, yu, r, logZ, logZRatio);
                     double c = d_p * r * Math.Exp(logPhiR);
                     betaL += c * invSqrtVxl * invSqrtVxl;
                     if (double.IsNaN(betaL)) throw new Exception("betaL is NaN");
                     //Trace.WriteLine($"Ryuryl = {Ryuryl} {Ryuryl2}");
-                    Trace.WriteLine($"u = {u} {u2} {u3}");
-                    Trace.WriteLine($"beta = {betaL} {u * invSqrtVxl * invSqrtVxl * Math.Exp(-logZRatio)} {u2 * invSqrtVxl * invSqrtVxl * Math.Exp(-logZRatio3)}");
+                    //Trace.WriteLine($"u = {u} {u2} {u3} {u4}");
+                    Trace.WriteLine($"q = {q} {q2} {q3} w = {w}");
+                    //Trace.WriteLine($"beta = {betaL} {u * invSqrtVxl * invSqrtVxl * Math.Exp(-logZRatio)} {u4 * invSqrtVxl * invSqrtVxl * Math.Exp(-logZRatio)}");
                 }
                 return GaussianOp.GaussianFromAlphaBeta(lowerBound, alphaL, betaL, ForceProper);
             }
@@ -1322,7 +1356,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                         logPhiL += MMath.NormalCdfLn(yuryl);
                     }
                     if (logPhiL > double.MaxValue) throw new Exception();
-                    Trace.WriteLine($"yuryl = {yuryl}, invSqrtVxl = {invSqrtVxl} useLogZRatio = {useLogZRatio}");
+                    //Trace.WriteLine($"yuryl = {yuryl}, invSqrtVxl = {invSqrtVxl} useLogZRatio = {useLogZRatio}");
                 }
                 alphaL = -d_p * invSqrtVxl * Math.Exp(logPhiL - (useLogZRatio ? logZRatio : logZ));
             }
