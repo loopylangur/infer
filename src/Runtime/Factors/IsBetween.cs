@@ -921,19 +921,42 @@ namespace Microsoft.ML.Probabilistic.Factors
                 double yl, yu, r, invSqrtVxl, invSqrtVxu;
                 GetDiffMeanAndVariance(X, lowerBound, upperBound, out yl, out yu, out r, out invSqrtVxl, out invSqrtVxu);
                 double logZRatio = ((r > smallR) && (logZ < smallLogZ)) ? MMath.NormalCdfRatioLn(yl, yu, r) : 0;
+                // if yl << -2 and r < 0 then logZRatio = Math.Log((r * Rylryu + Ryuryl) / (-yl)).
                 // if we get here, we know that -1 < r <= 0 and invSqrtVxl is finite
                 // since lowerBound is not uniform and X is not uniform, invSqrtVxl > 0
                 // yl is always finite.  yu may be +/-infinity.
                 double alphaL;
-                GetAlpha(X, lowerBound, upperBound, logZ, logZRatio, d_p, yl, yu, r, invSqrtVxl, invSqrtVxu, true, out alphaL, false, out double alphaU, out double alphaX, out double ignore, out double yuInvSqrtVxuMinusAlphaX);
+                GetAlpha(X, lowerBound, upperBound, logZ, logZRatio, d_p, yl, yu, r, invSqrtVxl, invSqrtVxu, true, out alphaL, false, out double alphaU, out double alphaX, out double ylInvSqrtVxlPlusAlphaX, out double yuInvSqrtVxuMinusAlphaX);
                 // (mx - ml) / (vl + vx) = yl*invSqrtVxl
                 double betaL = alphaL * (alphaL - yl * invSqrtVxl);
                 if (r > -1 && r != 0 && !precisionWasZero)
                 {
+                    double omr2 = (1 - r) * (1 + r); // more accurate than 1-r*r     
+                    double yuryl = (yu - r * yl) / Math.Sqrt(omr2);
+                    double c2 = r / Math.Sqrt(omr2) * Math.Exp(-logZRatio);
+                    double alpha2 = -invSqrtVxl * MMath.NormalCdfRatio(yuryl) * Math.Exp(-logZRatio);
+                    // alphaL*(alphaL - yl*invSqrtVxl) = invSqtVxl^2*R(yuryl)/ZRatio*(R(yuryl)/ZRatio + yl)
+                    double beta2 = invSqrtVxl * invSqrtVxl * MMath.NormalCdfRatio(yuryl) * Math.Exp(-logZRatio) * (MMath.NormalCdfRatio(yuryl) * Math.Exp(-logZRatio) + yl);
+                    double Ryuryl = MMath.NormalCdfRatio(yuryl);
+                    double u = Ryuryl * (Ryuryl * Math.Exp(-logZRatio) + yl) + r / Math.Sqrt(omr2);
+                    // this is exact when yuryl < -1e4
+                    double Ryuryl2 = -1/yuryl + 1/(yuryl*yuryl*yuryl);
+                    double ylryu = (yl - r * yu) / Math.Sqrt(omr2);
+                    double Rylryu = MMath.NormalCdfRatio(ylryu);
+                    double logZRatio2 = Math.Log((r * Rylryu + Ryuryl) / (-yl));
+                    //double logZRatio3 = Math.Log(((r * Rylryu + Ryuryl)*yl + r*Math.Sqrt(omr2)*MMath.NormalCdfMomentRatio(1, ylryu)) / (yl*yl + 1) / (-1));
+                    double logZRatio3 = Math.Log(((r * Rylryu + Ryuryl) * yl + r * Math.Sqrt(omr2) * (ylryu*Rylryu + 1)) / (yl * yl + 1) / (-1));
+                    Trace.WriteLine($"logZRatio = {logZRatio} {logZRatio2} {logZRatio3} {Math.Exp(-logZRatio)} {Math.Exp(-logZRatio2)} {Math.Exp(-logZRatio3)}");
+                    double u2 = Ryuryl * (Ryuryl * Math.Exp(-logZRatio3) + yl) + r / Math.Sqrt(omr2);
+                    double u3 = Ryuryl * (-Ryuryl * yl / (r * Rylryu + Ryuryl) + yl) + r / Math.Sqrt(omr2);
+
                     double logPhiR = GetLogPhiR(X, lowerBound, upperBound, yl, yu, r, logZ, logZRatio);
                     double c = d_p * r * Math.Exp(logPhiR);
                     betaL += c * invSqrtVxl * invSqrtVxl;
                     if (double.IsNaN(betaL)) throw new Exception("betaL is NaN");
+                    //Trace.WriteLine($"Ryuryl = {Ryuryl} {Ryuryl2}");
+                    Trace.WriteLine($"u = {u} {u2} {u3}");
+                    Trace.WriteLine($"beta = {betaL} {u * invSqrtVxl * invSqrtVxl * Math.Exp(-logZRatio)} {u2 * invSqrtVxl * invSqrtVxl * Math.Exp(-logZRatio3)}");
                 }
                 return GaussianOp.GaussianFromAlphaBeta(lowerBound, alphaL, betaL, ForceProper);
             }
@@ -1062,7 +1085,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                 // since upperBound is not uniform and X is not uniform, invSqrtVxu > 0
                 // yu is always finite.  yl may be infinity, in which case r = 0.
                 double alphaU;
-                GetAlpha(X, lowerBound, upperBound, logZ, logZRatio, d_p, yl, yu, r, invSqrtVxl, invSqrtVxu, false, out double alphaL, true, out alphaU, out double alphaX, out double ignore, out double yuInvSqrtVxuMinusAlphaX);
+                GetAlpha(X, lowerBound, upperBound, logZ, logZRatio, d_p, yl, yu, r, invSqrtVxl, invSqrtVxu, false, out double alphaL, true, out alphaU, out double alphaX, out double ylInvSqrtVxlPlusAlphaX, out double yuInvSqrtVxuMinusAlphaX);
                 // (mu - mx) / (vx + vu) = yu*invSqrtVxu
                 double betaU = alphaU * (alphaU + yu * invSqrtVxu);
                 // This formula is slightly more accurate when r == -1 && yl > 0 && yu < 0:
@@ -1184,7 +1207,7 @@ namespace Microsoft.ML.Probabilistic.Factors
         private static double GetLogPhiR(Gaussian X, Gaussian lowerBound, Gaussian upperBound, double yl, double yu, double r, double logZ, double logZRatio)
         {
             bool useLogZRatio = (r > smallR) && (logZ < smallLogZ);
-            double omr2 = 1 - r * r;
+            double omr2 = (1 - r) * (1 + r); // more accurate than 1-r*r     
             double logPhiR = -0.5 * Math.Log(omr2);
             if (useLogZRatio) return logPhiR - logZRatio;
             logPhiR += -2 * MMath.LnSqrt2PI;
@@ -1299,7 +1322,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                         logPhiL += MMath.NormalCdfLn(yuryl);
                     }
                     if (logPhiL > double.MaxValue) throw new Exception();
-                    Trace.WriteLine($"yuryl = {yuryl}, invSqrtVxl = {invSqrtVxl}");
+                    Trace.WriteLine($"yuryl = {yuryl}, invSqrtVxl = {invSqrtVxl} useLogZRatio = {useLogZRatio}");
                 }
                 alphaL = -d_p * invSqrtVxl * Math.Exp(logPhiL - (useLogZRatio ? logZRatio : logZ));
             }
@@ -1343,7 +1366,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                 alphaU = d_p * invSqrtVxu * Math.Exp(logPhiU - (useLogZRatio ? logZRatio : logZ));
             }
             alphaX = -alphaL - alphaU;
-            if (useLogZRatio && Math.Abs(alphaX) < Math.Abs(alphaL)*1e-6)
+            if (useLogZRatio && Math.Abs(alphaX) < Math.Abs(alphaL) * 1e-6)
             {
                 // In this regime, we can assume NormalCdfRatio(x) == -1/x (since x < -1e8)
                 // alphaX = -alphaL - alphaU

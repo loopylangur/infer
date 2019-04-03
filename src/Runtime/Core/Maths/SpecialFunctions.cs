@@ -2334,22 +2334,25 @@ f = 1/gamma(x+1)-1
             else
                 exponent = Gaussian.GetLogProb(x, 0, 1);
             double omr2 = (1 - r) * (1 + r); // more accurate than 1-r*r            
-            double ymrx = (y - r * x) / Math.Sqrt(omr2);
             double scale;
-            if(ratio)
+            if (ratio)
             {
-                scale = 1;
-            }
-            else if (ymrx < 0)
-            {
-                // since phi(ymrx) will be small, we factor N(ymrx;0,1) out of the confrac
-                exponent += Gaussian.GetLogProb(ymrx, 0, 1);
                 scale = 1;
             }
             else
             {
-                // leave N(ymrx;0,1) in the confrac
-                scale = Math.Exp(Gaussian.GetLogProb(ymrx, 0, 1));
+                double ymrx = (y - r * x) / Math.Sqrt(omr2);
+                if (ymrx < 0)
+                {
+                    // since phi(ymrx) will be small, we factor N(ymrx;0,1) out of the confrac
+                    exponent += Gaussian.GetLogProb(ymrx, 0, 1);
+                    scale = 1;
+                }
+                else
+                {
+                    // leave N(ymrx;0,1) in the confrac
+                    scale = Math.Exp(Gaussian.GetLogProb(ymrx, 0, 1));
+                }
             }
             // This threshold is set using SpecialFunctionsTests.NormalCdf2Test2
             // For debugging, see SpecialFunctionsTests.NormalCdf2Test3
