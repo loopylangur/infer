@@ -2955,7 +2955,7 @@ weight * (tau + alphaX) + alphaX
                     Gaussian X = Gaussian.FromMeanAndPrecision(mean, System.Math.Pow(2, -i));
                     Gaussian toX = DoubleIsBetweenOp.XAverageConditional_Slow(Bernoulli.PointMass(true), X, lowerBound, upperBound);
                     Gaussian toLowerBound = DoubleIsBetweenOp.LowerBoundAverageConditional_Slow(Bernoulli.PointMass(true), X, lowerBound, upperBound);
-                    //Trace.WriteLine($"{X}: {toX.MeanTimesPrecision:r} {toX.Precision:r} {toLowerBound.MeanTimesPrecision:r} {toLowerBound.Precision:r}");
+                    Trace.WriteLine($"{X}: {toX.MeanTimesPrecision:r} {toX.Precision:r} {toLowerBound.MeanTimesPrecision:r} {toLowerBound.Precision:r}");
                     Assert.False(toLowerBound.IsPointMass);
                     if ((mean > 0 && toLowerBound.MeanTimesPrecision > toLowerBoundPrev.MeanTimesPrecision) ||
                         (mean < 0 && toLowerBound.MeanTimesPrecision < toLowerBoundPrev.MeanTimesPrecision))

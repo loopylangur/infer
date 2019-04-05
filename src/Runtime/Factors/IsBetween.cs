@@ -1352,8 +1352,19 @@ namespace Microsoft.ML.Probabilistic.Factors
                         // yl*ncru-1 = -yu*ncru-1 + (yl + yu) * ncru
                         // ZoverPhiL = delta*ZoverPhiU
                         // ZoverPhiU = ZoverPhiL/delta
+                        // yl + 1 / ZoverPhiL - 1 / ZoverPhiU = (yl*ZRatio + Rylryu - Ryuryl)/ZRatio
+                        // = (intZRatio - Rylryu - r*Ryuryl + Rylryu - Ryuryl)/ZRatio
+                        // = intZRatio/ZRatio = intZ/Z
                         //(-yl * ncrl + 1) * ZoverPhiU + (yl * ncru - 1) * ZoverPhiL;
                         //ncr1l - ncr1u + yuPlusyl * ncru + (yuPlusyl * ncru - ncr1u) * deltaMinus1;
+                        double intZ = MMath.NormalCdfIntegral(yl, yu, -1);
+                        double Z = MMath.NormalCdf(yu) - MMath.NormalCdf(-yl);
+                        // when r = -1, intZ = yl*Z + N(yl;0,1) - N(yu;0,1)
+                        double intZOverZ3 = intZ / Z;
+                        double intZOverZ4 = MMath.NormalCdfIntegralRatio(yl, yu, -1);
+                        double intZOverZ = yl + 1 / ZoverPhiL - 1 / ZoverPhiU;
+                        double intZOverZ2 = ncr1l / ZoverPhiL + (yuPlusyl * ncru - ncr1u) / ZoverPhiU;
+                        Trace.WriteLine($"intZOverZ = {intZOverZ} {intZOverZ2} {intZOverZ3} {intZOverZ4}");
                         ylInvSqrtVxlPlusAlphaX = invSqrtVxl * (ncr1l / ZoverPhiL + (yuPlusyl * ncru - ncr1u) / ZoverPhiU) + invSqrtVxlMinusInvSqrtVxu / ZoverPhiU;
                         //ylInvSqrtVxlPlusAlphaX = invSqrtVxl * (ncr1l + (yuPlusyl * ncru - ncr1u) * delta) / ZoverPhiL + invSqrtVxlMinusInvSqrtVxu / ZoverPhiU;
                         if (ylInvSqrtVxlPlusAlphaX < 0)

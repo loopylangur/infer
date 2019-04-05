@@ -2601,6 +2601,7 @@ f = 1/gamma(x+1)-1
             double Rdiff = RdiffIter.Current;
             double numer = NormalCdfRatioConFracNumer(x, y, r, scale, sqrtomr2, diff, Rdiff);
             double numerPrev = 0;
+            // Negating here avoids negation in the loop.
             double denom = -x;
             double denomPrev = -1;
             double resultPrev = 0;
@@ -2624,6 +2625,127 @@ f = 1/gamma(x+1)-1
                         throw new Exception($"NormalCdfRatioConFrac2b not converging for x={x:r} y={y:r} r={r:r} scale={scale}");
                     if (AreEqual(result, resultPrev))
                         return result;
+                    resultPrev = result;
+                }
+            }
+            return resultPrev;
+        }
+
+        /// <summary>
+        /// Computes the integral of the cumulative bivariate normal distribution wrt x.
+        /// </summary>
+        /// <param name="x">First upper limit.</param>
+        /// <param name="y">Second upper limit.</param>
+        /// <param name="r">Correlation coefficient.</param>
+        /// <returns></returns>
+        public static double NormalCdfIntegral(double x, double y, double r)
+        {
+            if (r != -1) throw new NotImplementedException();
+            if (x < 0 || y > 0 || y + x < 0) throw new ArgumentException();
+            double logProbY = Gaussian.GetLogProb(y, 0, 1);
+            double numer = 0;
+            // Negating here avoids negation in the loop.
+            // phix/phiy - 1
+            double xPlusy = x + y;
+            double numerPrev = ExpMinus1(xPlusy*(y-x)/2);
+            double denom = x;
+            double denomPrev = 1;
+            double resultPrev = 0;
+            double cEven = 1;
+            // cOdd = xPlusy^i / i!! for odd i
+            // cEven = xPlusy^i / (i-1)!! for even i
+            double cOdd = cEven * xPlusy;
+            double xPlusy2 = xPlusy * xPlusy;
+            for (int i = 1; i <= 1000; i++)
+            {
+                double numerNew, denomNew;
+                if (i % 2 == 1)
+                {
+                    if (i > 1)
+                        cOdd *= xPlusy2 / i;
+                    numerNew = x * numer + numerPrev + x * cOdd;
+                    denomNew = x * denom + denomPrev;
+                }
+                else
+                {
+                    cEven *= xPlusy2 / (i-1);
+                    numerNew = (x * numer + i * numerPrev + x * cEven) / (i + 1);
+                    denomNew = (x * denom + i * denomPrev) / (i + 1);
+                }
+                //double numerNew = x * numer + i * numerPrev + c;
+                //double denomNew = x * denom + i * denomPrev;
+                numerPrev = numer;
+                numer = numerNew;
+                denomPrev = denom;
+                denom = denomNew;
+                if (i % 2 == 1)
+                {
+                    double result = numer / denom;
+                    //Console.WriteLine($"iter {i}: result={result:r} cOdd={cOdd:g4} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
+                    if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 1000)
+                        throw new Exception($"NormalCdfIntegral not converging for x={x:r} y={y:r} r={r:r}");
+                    if (AreEqual(result, resultPrev))
+                        break;
+                    resultPrev = result;
+                }
+            }
+            return resultPrev*Math.Exp(logProbY);
+        }
+
+        /// <summary>
+        /// Computes the integral of the cumulative bivariate normal distribution wrt x, divided by the cumulative bivariate normal distribution.
+        /// </summary>
+        /// <param name="x">First upper limit.</param>
+        /// <param name="y">Second upper limit.</param>
+        /// <param name="r">Correlation coefficient.</param>
+        /// <returns></returns>
+        public static double NormalCdfIntegralRatio(double x, double y, double r)
+        {
+            if (r != -1) throw new NotImplementedException();
+            if (x < 0 || y > 0 || y + x < 0) throw new ArgumentException();
+            double numer = 0;
+            // Negating here avoids negation in the loop.
+            // numerPrev = phix/phiy - 1
+            double xPlusy = x + y;
+            double numerPrev = ExpMinus1(xPlusy * (y - x) / 2);
+            double denom = -numerPrev;
+            double denomPrev = 0;
+            double resultPrev = 0;
+            double cEven = 1;
+            // cOdd = xPlusy^i / i!! for odd i
+            // cEven = xPlusy^i / (i-1)!! for even i
+            double cOdd = cEven * xPlusy;
+            double xPlusy2 = xPlusy * xPlusy;
+            for (int i = 1; i <= 1000; i++)
+            {
+                double numerNew, denomNew;
+                if (i % 2 == 1)
+                {
+                    if (i > 1)
+                        cOdd *= xPlusy2 / i;
+                    numerNew = x * numer + numerPrev + x * cOdd;
+                    denomNew = x * denom + denomPrev + cOdd;
+                }
+                else
+                {
+                    cEven *= xPlusy2 / (i - 1);
+                    numerNew = (x * numer + i * numerPrev + x * cEven) / (i + 1);
+                    denomNew = (x * denom + i * denomPrev + cEven) / (i + 1);
+                }
+                //double numerNew = x * numer + i * numerPrev + c;
+                //double denomNew = x * denom + i * denomPrev;
+                numerPrev = numer;
+                numer = numerNew;
+                denomPrev = denom;
+                denom = denomNew;
+                if (i % 2 == 1)
+                {
+                    double result = numer / denom;
+                    //Console.WriteLine($"iter {i}: result={result:r} cOdd={cOdd:g4} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
+                    if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 1000)
+                        throw new Exception($"NormalCdfIntegral not converging for x={x:r} y={y:r} r={r:r}");
+                    if (AreEqual(result, resultPrev))
+                        break;
                     resultPrev = result;
                 }
             }
