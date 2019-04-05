@@ -2930,27 +2930,63 @@ weight * (tau + alphaX) + alphaX
             Gaussian X = Gaussian.FromNatural(898.71395259259464, 1.4308788553248037);
             Gaussian lowerBound = Gaussian.FromNatural(17028358.45574614, 9);
             Gaussian upperBound = Gaussian.FromNatural(412820.08287991461, 423722.55474045349);
-            //double logZ = -16108807705562.615;
             for (int i = -10; i <= 0; i++)
             {
                 lowerBound = Gaussian.FromNatural(17028358.45574614*System.Math.Pow(2,i), 9);
-                // beta is unstable
-                // should compute moments directly
                 Gaussian toLowerBound = DoubleIsBetweenOp.LowerBoundAverageConditional_Slow(Bernoulli.PointMass(true), X, lowerBound, upperBound);
-                //Trace.WriteLine($"{lowerBound}: {toLowerBound.MeanTimesPrecision} {toLowerBound.Precision}");
+                Trace.WriteLine($"{lowerBound}: {toLowerBound.MeanTimesPrecision} {toLowerBound.Precision}");
+                Assert.False(toLowerBound.IsPointMass);
             }
-            //Assert.False(DoubleIsBetweenOp.LowerBoundAverageConditional(Bernoulli.PointMass(true), X, lowerBound, upperBound, logZ).IsPointMass);
+        }
+
+        [Fact]
+        public void GaussianIsBetweenCRRR_SmallXPrecisionTest()
+        {
+            Gaussian lowerBound = Gaussian.FromNatural(-102.3311202057678, 91.572320438929935);
+            Gaussian upperBound = Gaussian.FromNatural(102.27224205502382, 91.541070478258376);
+            foreach (var mean in new[] { 1e7, -1e7 })
+            {
+                Gaussian toLowerBoundPrev = Gaussian.FromNatural(double.MaxValue, double.MaxValue);
+                Gaussian toXPrev = Gaussian.FromNatural(double.MaxValue, double.MaxValue);
+                double xMeanTimesPrecisionMaxUlpError = 0;
+                double lowerBoundMeanTimesPrecisionMaxUlpError = 0;
+                for (int i = 20; i < 200; i++)
+                {
+                    Gaussian X = Gaussian.FromMeanAndPrecision(mean, System.Math.Pow(2, -i));
+                    Gaussian toX = DoubleIsBetweenOp.XAverageConditional_Slow(Bernoulli.PointMass(true), X, lowerBound, upperBound);
+                    Gaussian toLowerBound = DoubleIsBetweenOp.LowerBoundAverageConditional_Slow(Bernoulli.PointMass(true), X, lowerBound, upperBound);
+                    //Trace.WriteLine($"{X}: {toX.MeanTimesPrecision:r} {toX.Precision:r} {toLowerBound.MeanTimesPrecision:r} {toLowerBound.Precision:r}");
+                    Assert.False(toLowerBound.IsPointMass);
+                    if ((mean > 0 && toLowerBound.MeanTimesPrecision > toLowerBoundPrev.MeanTimesPrecision) ||
+                        (mean < 0 && toLowerBound.MeanTimesPrecision < toLowerBoundPrev.MeanTimesPrecision))
+                    {
+                        lowerBoundMeanTimesPrecisionMaxUlpError = System.Math.Max(lowerBoundMeanTimesPrecisionMaxUlpError, UlpDiff(toLowerBound.MeanTimesPrecision, toLowerBoundPrev.MeanTimesPrecision));
+                        //Assert.True(meanTimesPrecisionMaxUlpError < 5);
+                    }
+                    if ((mean > 0 && toX.MeanTimesPrecision > toXPrev.MeanTimesPrecision) ||
+                        (mean < 0 && toX.MeanTimesPrecision < toXPrev.MeanTimesPrecision))
+                    {
+                        xMeanTimesPrecisionMaxUlpError = System.Math.Max(xMeanTimesPrecisionMaxUlpError, UlpDiff(toX.MeanTimesPrecision, toXPrev.MeanTimesPrecision));
+                        //Assert.True(meanTimesPrecisionMaxUlpError < 5);
+                    }
+                    toLowerBoundPrev = toLowerBound;
+                    toXPrev = toX;
+                }
+                Trace.WriteLine($"xMeanTimesPrecisionMaxUlpError = {xMeanTimesPrecisionMaxUlpError} lowerBoundMeanTimesPrecisionMaxUlpError = {lowerBoundMeanTimesPrecisionMaxUlpError}");
+                //Assert.True(xMeanTimesPrecisionMaxUlpError < 5);
+                Assert.True(lowerBoundMeanTimesPrecisionMaxUlpError < 5);
+            }
         }
 
         [Fact]
         public void GaussianIsBetweenTest2()
         {
-            // See GaussianIsBetweenCRRR_LowerBoundTest
-            Assert.False(DoubleIsBetweenOp.LowerBoundAverageConditional(Bernoulli.PointMass(true), Gaussian.FromNatural(898.71395259259464, 1.4308788553248037), Gaussian.FromNatural(17028358.45574614, 9), Gaussian.FromNatural(412820.08287991461, 423722.55474045349), -16108807705562.615).IsPointMass);
-            Assert.True(!double.IsNaN(DoubleIsBetweenOp.XAverageConditional_Slow(Bernoulli.PointMass(true), Gaussian.FromNatural(0.9106071714590378, 5.9521837280027985E-11), Gaussian.FromNatural(-49.9894026120194, 107.30343404076896), Gaussian.FromNatural(49.051818445888259, 107.26846525506932)).MeanTimesPrecision));
-            Assert.True(!double.IsNaN(DoubleIsBetweenOp.XAverageConditional_Slow(Bernoulli.PointMass(true), Gaussian.FromNatural(-5.3548456213550253E-41, 4.61370960061741E-81), Gaussian.FromNatural(-15848812.635800883, 13451.362337266379), Gaussian.FromNatural(-22204349.280881952, 389690.00236138358)).MeanTimesPrecision));
-            Assert.True(!double.IsNaN(DoubleIsBetweenOp.XAverageConditional(Bernoulli.PointMass(true), new Gaussian(1, 2), double.PositiveInfinity, double.PositiveInfinity).MeanTimesPrecision));
             Bernoulli isBetween = new Bernoulli(1);
+            DoubleIsBetweenOp.LowerBoundAverageConditional_Slow(isBetween, Gaussian.FromNatural(1.156293233217532E-25, 6.162975822039154E-33), Gaussian.FromNatural(-102.3311202057678, 91.572320438929935), Gaussian.FromNatural(102.27224205502382, 91.541070478258376));
+            Assert.False(double.IsNaN(DoubleIsBetweenOp.XAverageConditional_Slow(isBetween, Gaussian.FromNatural(980.18122429721575, 1.409544490082087), Gaussian.FromNatural(17028174.685026139, 837.26675043005957), Gaussian.FromNatural(412820.4122154137, 423722.54499249317)).MeanTimesPrecision));
+            Assert.False(double.IsNaN(DoubleIsBetweenOp.XAverageConditional_Slow(isBetween, Gaussian.FromNatural(0.9106071714590378, 5.9521837280027985E-11), Gaussian.FromNatural(-49.9894026120194, 107.30343404076896), Gaussian.FromNatural(49.051818445888259, 107.26846525506932)).MeanTimesPrecision));
+            Assert.False(double.IsNaN(DoubleIsBetweenOp.XAverageConditional_Slow(isBetween, Gaussian.FromNatural(-5.3548456213550253E-41, 4.61370960061741E-81), Gaussian.FromNatural(-15848812.635800883, 13451.362337266379), Gaussian.FromNatural(-22204349.280881952, 389690.00236138358)).MeanTimesPrecision));
+            Assert.False(double.IsNaN(DoubleIsBetweenOp.XAverageConditional(isBetween, new Gaussian(1, 2), double.PositiveInfinity, double.PositiveInfinity).MeanTimesPrecision));
             Gaussian x = new Gaussian(0, 1);
             Gaussian lowerBound = new Gaussian(1, 8);
             Gaussian upperBound = new Gaussian(3, 3);

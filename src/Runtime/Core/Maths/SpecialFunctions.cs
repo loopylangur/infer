@@ -2335,7 +2335,7 @@ f = 1/gamma(x+1)-1
                 exponent = Gaussian.GetLogProb(x, 0, 1);
             double omr2 = (1 - r) * (1 + r); // more accurate than 1-r*r            
             double scale;
-            if (ratio)
+            if (ratio && false)
             {
                 scale = 1;
             }
@@ -2345,19 +2345,25 @@ f = 1/gamma(x+1)-1
                 if (ymrx < 0)
                 {
                     // since phi(ymrx) will be small, we factor N(ymrx;0,1) out of the confrac
-                    exponent += Gaussian.GetLogProb(ymrx, 0, 1);
+                    if(!ratio)
+                        exponent += Gaussian.GetLogProb(ymrx, 0, 1);
                     scale = 1;
                 }
                 else
                 {
                     // leave N(ymrx;0,1) in the confrac
-                    scale = Math.Exp(Gaussian.GetLogProb(ymrx, 0, 1));
+                    double logProb = Gaussian.GetLogProb(ymrx, 0, 1);
+                    if (ratio)
+                        exponent -= logProb;
+                    scale = Math.Exp(logProb);
                 }
             }
             // This threshold is set using SpecialFunctionsTests.NormalCdf2Test2
             // For debugging, see SpecialFunctionsTests.NormalCdf2Test3
             if (x < -2 || (x < -1 && omr2 <= 1 - 0.48 * 0.48))
             {
+                // For x == -1.2, this should not be used when omr2 > 1 - 0.34 * 0.34
+                // For x == -1.1, this should not be used when omr2 > 1 - 0.37 * 0.37
                 exponent -= Math.Log(-x);
                 return NormalCdfRatioConFrac(x, y, r, scale);
             }
@@ -2374,6 +2380,8 @@ f = 1/gamma(x+1)-1
             }
             else
             {
+                // For x == -1.2, this should not be used when omr2 > 1 - 0.37 * 0.37
+                // For x == -1.1, this should not be used when omr2 > 1 - 0.4 * 0.4
                 // For x == -1.0, this should not be used when omr2 > 1 - 0.48 * 0.48
                 // For x == -0.9, this should not be used when omr2 > 1 - 0.51 * 0.51
                 // For x == -0.8, this should not be used when omr2 > 1 - 0.51 * 0.51
@@ -2414,7 +2422,6 @@ f = 1/gamma(x+1)-1
             double sumOld = sum;
             for (int n = 2; n <= 100; n++)
             {
-                if (n == 100) throw new Exception($"not converging for x={x}, y={y}, r={r}");
                 //Console.WriteLine($"n = {n - 1} sum = {sum:r}");
                 double dlogphiOverFactorial;
                 if (n % 2 == 0) dlogphiOverFactorial = 1.0 / n - Halfx2y2;
@@ -2429,8 +2436,8 @@ f = 1/gamma(x+1)-1
                 Qderivs.Add(QderivOverFactorial);
                 rPowerN *= r;
                 sum += QderivOverFactorial * rPowerN;
-                if ((sum > double.MaxValue) || double.IsNaN(sum))
-                    throw new Exception($"not converging for x={x}, y={y}, r={r}");
+                if ((sum > double.MaxValue) || double.IsNaN(sum) || n >= 100)
+                    throw new Exception($"NormalCdfRatioTaylor not converging for x={x:r}, y={y:r}, r={r:r}");
                 if (AreEqual(sum, sumOld)) break;
                 sumOld = sum;
             }
@@ -2448,8 +2455,6 @@ f = 1/gamma(x+1)-1
                 throw new ArgumentException("r > 0");
             if (x - r * y > 0)
                 throw new ArgumentException("x - r*y > 0");
-            if (scale == 0)
-                return scale;
             double omr2 = (1 - r) * (1 + r); // more accurate than 1-r*r
             double sqrtomr2 = Math.Sqrt(omr2);
             double diff = (x - r * y) / sqrtomr2;
@@ -2479,13 +2484,16 @@ f = 1/gamma(x+1)-1
                 numer = numerNew;
                 denomPrev = denom;
                 denom = denomNew;
-                result = numer / denom;
-                //Console.WriteLine("iter {0}: {1} {2}", i, result.ToString("r"), c.ToString("g4"));
-                if ((result > double.MaxValue) || double.IsNaN(result) || result < 0)
-                    throw new Exception($"not converging for x={x:r}, y={y:r}, r={r:r}");
-                if (AreEqual(result, resultPrev))
-                    return result;
-                resultPrev = result;
+                if (i % 2 == 1)
+                {
+                    result = numer / denom;
+                    //Console.WriteLine($"iter {i}: {result:r} {c:r} {b:r}");
+                    if ((result > double.MaxValue) || double.IsNaN(result) || result < 0)
+                        throw new Exception($"NormalCdfRatioConFrac not converging for x={x:r}, y={y:r}, r={r:r}");
+                    if (AreEqual(result, resultPrev))
+                        return result;
+                    resultPrev = result;
+                }
             }
             throw new Exception($"not converging for x={x:r}, y={y:r}, r={r:r}");
         }
@@ -2522,8 +2530,6 @@ f = 1/gamma(x+1)-1
                 throw new ArgumentException("r > 0");
             if (x - r * y > 0)
                 throw new ArgumentException("x - r*y > 0");
-            if (scale == 0)
-                return scale;
             double omr2 = (1 - r) * (1 + r); // more accurate than 1-r*r
             double sqrtomr2 = Math.Sqrt(omr2);
             double diff = (x - r * y) / sqrtomr2;
@@ -2587,8 +2593,6 @@ f = 1/gamma(x+1)-1
                 throw new ArgumentException("r > 0");
             if (x - r * y > 0)
                 throw new ArgumentException("x - r*y > 0");
-            if (scale == 0)
-                return scale;
             double omr2 = (1 - r) * (1 + r); // more accurate than 1-r*r
             double sqrtomr2 = Math.Sqrt(omr2);
             double diff = (x - r * y) / sqrtomr2;
@@ -2601,7 +2605,7 @@ f = 1/gamma(x+1)-1
             double denomPrev = -1;
             double resultPrev = 0;
             double rDy = scale * r;
-            for (int i = 1; i < 1000; i++)
+            for (int i = 1; i <= 1000; i++)
             {
                 RdiffIter.MoveNext();
                 double c = RdiffIter.Current;
@@ -2616,14 +2620,14 @@ f = 1/gamma(x+1)-1
                 {
                     double result = numer / denom;
                     //Console.WriteLine($"iter {i}: result={result:r} c={c:g4} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
-                    if ((result > double.MaxValue) || double.IsNaN(result) || result < 0)
-                        throw new Exception($"NormalCdfRatioConFrac2b not converging for x={x} y={y} r={r} scale={scale}");
+                    if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 1000)
+                        throw new Exception($"NormalCdfRatioConFrac2b not converging for x={x:r} y={y:r} r={r:r} scale={scale}");
                     if (AreEqual(result, resultPrev))
                         return result;
                     resultPrev = result;
                 }
             }
-            throw new Exception($"NormalCdfRatioConFrac2b not converging for x={x} y={y} r={r} scale={scale}");
+            return resultPrev;
         }
 
         /// <summary>

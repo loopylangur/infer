@@ -1777,8 +1777,8 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             MMath.NormalCdf(-2, -2, -0.5);
             NormalCdf_Quadrature(-2, -2, -0.5);
             Stopwatch watch = new Stopwatch();
-            double xmin = -1;
-            double xmax = -1;
+            double xmin = -1.00001;
+            double xmax = -1.00001;
             double n = 200;
             double xinc = (xmax - xmin) / (n - 1);
             for (int xi = 0; xi < n; xi++)
@@ -1793,7 +1793,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     double y = ymin + yi * yinc;
                     double rmin = -0.999999;
                     double rmax = -0.000001;
-                    rmin = -0.6;
+                    rmin = -0.5;
                     rmax = -0.4;
                     double rinc = (rmax - rmin) / (n - 1);
                     for (int ri = 0; ri < n; ri++)
@@ -1824,7 +1824,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                         }
                         long ticks2 = watch.ElapsedTicks;
                         if (double.IsNaN(result1) || ticks > 10 * ticks2)
-                            Trace.WriteLine($"({x},{y},{r}): {good} {ticks} {ticks2} {result1} {result2}");
+                            Trace.WriteLine($"({x:r},{y:r},{r:r}): {good} {ticks} {ticks2} {result1} {result2}");
                     }
                 }
             }
@@ -1888,7 +1888,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 //Console.WriteLine("{0}", NormalCdfAlt2(x, y, r));
                 //Console.WriteLine("NormalCdfAlt: {0}", NormalCdfAlt(x, y, r));
                 //Console.WriteLine("NormalCdfTaylor: {0}", NormalCdfTaylor(x, y, r));
-                Console.WriteLine("NormalCdfConFrac3: {0}", NormalCdfConFrac3(x, y, r));
+                //Console.WriteLine("NormalCdfConFrac3: {0}", NormalCdfConFrac3(x, y, r));
                 //Console.WriteLine("NormalCdfConFrac4: {0}", NormalCdfConFrac4(x, y, r));
                 Console.WriteLine("NormalCdfConFrac5: {0}", NormalCdfConFrac5(x, y, r));
                 Console.WriteLine("MMath.NormalCdf: {0}", MMath.NormalCdf(x, y, r));
@@ -1928,6 +1928,10 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             // integral(1/(2*pi*sqrt(1-t*t))*exp(-(x*x+y*y-2*t*x*y)/(2*(1-t*t))),t,-1,r).n(digits=200);
             double[,] normalcdf2_pairs = new double[,]
                 {
+                    { -9945842.6290678252, 9945822.06800303, -0.98919581102480514, 0 },
+                    { -312498.36862450332, 312498.298221121, -0.999989333908269, 0 },
+                    { -1.143307502481119, 0.49983795334601688, -0.65, 0.0306849096621242 },
+                    { -1.143307502481119, 0.64555140288768986, -0.53867143302788545, 0.049792920736062646 },
                     {-1.5, 1.5, -0.49, 0.04889082718786 },
                     {-1.5, 1.5, -0.50, 0.048484159276754 },
                     {-1.5, 1.5, -0.51, 0.0480706563619095 },
@@ -1953,6 +1957,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     {0.6, -1, -1, 0.0},
                     {-1, 0.6, -1, 0.0},
                     {-1, -1, -1, 0.0},
+                    {-0.5,0.5,-0.4, 0.160231262969512 },
                     {x, y, 0.95,0.0817971046701358 + xy1 },
                     {x,y,-0.95, 2.08560436479985e-17 + xy1},
                     {x, y, 0.9, 0.0726860333050785 + xy1},
@@ -1982,6 +1987,8 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             // log(integrate(1/(2*pi*sqrt(1-t*t))*exp(-(2*1.5*1.5 + 2*t*1.5*1.5)/(2*(1-t*t))),t,-1,-0.5))
             double[,] normalcdfln2_pairs = new double[,]
                 {
+                    { -9945842.6290678252, 9945822.06800303, -0.98919581102480514, -49459892801108.422 },
+                    { -312498.36862450332, 312498.298221121, -0.999989333908269, -48827615210.059265 },
                     { -1.5235871609407412, 0.069296909625515962, -0.027053117898400668, -3.43212590748818 },
                     { -63, 63, -0.4637494637494638, -1989.56232505372569173398 },
                     {-0.1,-0.1, -0.999999, -10018.30269574383335648},
@@ -2022,6 +2029,13 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     {x, double.PositiveInfinity, 0.5, MMath.NormalCdfLn(x)}
                 };
             CheckFunctionValues("NormalCdfLn2", new MathFcn3(MMath.NormalCdfLn), normalcdfln2_pairs);
+
+            double[,] normalcdfRatioLn2_pairs = new double[,]
+                {
+                    { -9945842.6290678252, 9945822.06800303, -0.98919581102480514, 268535429229.67789 },
+                    { -312498.36862450332, 312498.298221121, -0.999989333908269, 249505.2149799816 },
+                };
+            CheckFunctionValues("NormalCdfRatioLn2", new MathFcn3(MMath.NormalCdfRatioLn), normalcdfRatioLn2_pairs);
         }
 
         [Fact]
@@ -2454,10 +2468,10 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 {
                     //Console.WriteLine("denom/dfact = {0}", denom / dfact);
                     double result = -numer / denom;
-                    //Console.WriteLine("iter {0}: {1}", i, result);
+                    Console.WriteLine("iter {0}: {1}", i, result);
                     if (double.IsInfinity(result) || double.IsNaN(result))
                         throw new Exception();
-                    if (result == rprev)
+                    if (MMath.AreEqual(result, rprev))
                         return result;
                     rprev = result;
                 }

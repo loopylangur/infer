@@ -81,15 +81,8 @@ namespace TestApp
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
-            //new GaussianOpTests().GaussianOpX();
-            //new OperatorTests().GaussianIsBetweenTest2();
-            new OperatorTests().GaussianIsBetweenCRRR_LowerBoundTest();
-            //new OperatorTests().GaussianIsBetweenCRRR_NegativeUpperBoundTest();
-            //new OperatorTests().GaussianIsBetween_PointLowerBound();
-            //new OperatorTests().GaussianIsBetween_PointUpperBound();
-            //new OperatorTests().GaussianIsBetweenCRRR_IsMonotonicInX();
-            //new OperatorTests().GaussianIsBetweenCRRR_IsMonotonicInX2();
-            //new TutorialTests().ClickModel();
+            //new SpecialFunctionsTests().NormalCdf2Test();
+            new OperatorTests().GaussianIsBetweenCRRR_SmallXPrecisionTest();
 
             if (false)
             {
