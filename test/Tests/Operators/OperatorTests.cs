@@ -2942,15 +2942,29 @@ weight * (tau + alphaX) + alphaX
         [Fact]
         public void GaussianIsBetweenCRRR_SmallXPrecisionTest()
         {
+            double x =  0.0093132267868981222;
+            double y = -0.0093132247056551785;
+            Console.WriteLine(MMath.NormalCdf(x, y, -1));
+            // after 29000 iters: 1.04062139616797E-09
+            //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1) / MMath.NormalCdf(x, y, -1));
+            // after 25000 iters: 1.04062147440396E-09
+            Console.WriteLine(MMath.NormalCdfIntegralRatio(x, y, -1));
+            //Console.WriteLine(MMath.NormalCdfIntegralRatio(x, -y, -1));
+            //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, y, -1));
+            //Console.WriteLine(MMath.NormalCdfIntegralRatio(y, x, -1));
+            //Console.WriteLine(MMath.NormalCdfIntegral(-x, -y, -1) / MMath.NormalCdf(-x, -y, -1));
+            //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1)/MMath.NormalCdf(x, y, -1));
+            //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, -y, -1));
+
             Gaussian lowerBound = Gaussian.FromNatural(-102.3311202057678, 91.572320438929935);
             Gaussian upperBound = Gaussian.FromNatural(102.27224205502382, 91.541070478258376);
-            foreach (var mean in new[] { 1e7, -1e7 })
+            foreach (var mean in new[] { /*1e7,*/ -1e7 })
             {
                 Gaussian toLowerBoundPrev = Gaussian.FromNatural(double.MaxValue, double.MaxValue);
                 Gaussian toXPrev = Gaussian.FromNatural(double.MaxValue, double.MaxValue);
                 double xMeanTimesPrecisionMaxUlpError = 0;
                 double lowerBoundMeanTimesPrecisionMaxUlpError = 0;
-                for (int i = 20; i < 200; i++)
+                for (int i = 4; i < 200; i++)
                 {
                     Gaussian X = Gaussian.FromMeanAndPrecision(mean, System.Math.Pow(2, -i));
                     Gaussian toX = DoubleIsBetweenOp.XAverageConditional_Slow(Bernoulli.PointMass(true), X, lowerBound, upperBound);
@@ -2967,13 +2981,15 @@ weight * (tau + alphaX) + alphaX
                         (mean < 0 && toX.MeanTimesPrecision < toXPrev.MeanTimesPrecision))
                     {
                         xMeanTimesPrecisionMaxUlpError = System.Math.Max(xMeanTimesPrecisionMaxUlpError, UlpDiff(toX.MeanTimesPrecision, toXPrev.MeanTimesPrecision));
-                        //Assert.True(meanTimesPrecisionMaxUlpError < 5);
+                        //Assert.True(xMeanTimesPrecisionMaxUlpError < 1e12);
                     }
                     toLowerBoundPrev = toLowerBound;
                     toXPrev = toX;
                 }
+                // Fails due to an abrupt change when r becomes -1
+                // When r == -1, the second "replaces" should do nothing.  The problem is likely alpha.
                 Trace.WriteLine($"xMeanTimesPrecisionMaxUlpError = {xMeanTimesPrecisionMaxUlpError} lowerBoundMeanTimesPrecisionMaxUlpError = {lowerBoundMeanTimesPrecisionMaxUlpError}");
-                //Assert.True(xMeanTimesPrecisionMaxUlpError < 5);
+                Assert.True(xMeanTimesPrecisionMaxUlpError < 1e13);
                 Assert.True(lowerBoundMeanTimesPrecisionMaxUlpError < 5);
             }
         }

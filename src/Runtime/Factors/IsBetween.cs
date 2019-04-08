@@ -1093,7 +1093,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                     double c = d_p * r * Math.Exp(logPhiR);
                     betaX += c * (-2 * X.Precision + invSqrtVxl * invSqrtVxl + invSqrtVxu * invSqrtVxu);
                 }
-                //Trace.WriteLine($"alphaX={alphaX}, alphaL={alphaL}, alphaU={alphaU}, betaX={betaX}, ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX}, yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX}");
+                Trace.WriteLine($"alphaX={alphaX}, alphaL={alphaL}, alphaU={alphaU}, betaX={betaX}, ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX}, yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX}");
                 return GaussianOp.GaussianFromAlphaBeta(X, alphaX, betaX, ForceProper);
             }
             return result;
@@ -1180,6 +1180,10 @@ namespace Microsoft.ML.Probabilistic.Factors
             double d_p, double yl, double yu, double r, double invSqrtVxl, double invSqrtVxu,
             bool getAlphaL, out double alphaL, bool getAlphaU, out double alphaU, out double alphaX, out double ylInvSqrtVxlPlusAlphaX, out double yuInvSqrtVxuMinusAlphaX)
         {
+            double mx, vx, ml, vl, mu, vu;
+            X.GetMeanAndVariance(out mx, out vx);
+            lowerBound.GetMeanAndVariance(out ml, out vl);
+            upperBound.GetMeanAndVariance(out mu, out vu);
             double omr2 = (1 - r) * (1 + r); // more accurate than 1-r*r     
             bool useLogZRatio = (r > smallR) && (logZ < smallLogZ);
             alphaL = 0.0;
@@ -1206,10 +1210,6 @@ namespace Microsoft.ML.Probabilistic.Factors
                         // (mu-mx)*invSqrtVxu + vx*invSqrtVxu*invSqrtVxl*(mx-ml)*invSqrtVxl =
                         // (mu-mx + (mx-ml)*vx/(vx+vl))*invSqrtVxu =
                         // (mx*vl/(vx+vl) + mu - ml*vx/(vx+vu))*invSqrtVxl
-                        double mx, vx, ml, vl, mu, vu;
-                        X.GetMeanAndVariance(out mx, out vx);
-                        lowerBound.GetMeanAndVariance(out ml, out vl);
-                        upperBound.GetMeanAndVariance(out mu, out vu);
                         yuryl = (mx * vl / (vx + vl) + mu - ml * vx / (vx + vl)) / Math.Sqrt(vx * vl + vx * vu + vl * vu) / invSqrtVxl;
                     }
                     if (useLogZRatio)
@@ -1250,10 +1250,6 @@ namespace Microsoft.ML.Probabilistic.Factors
                         // (mx-ml + (mu-mx)*vx/(vx+vu))*invSqrtVxl =
                         // (mx*vu/(vx+vu) - ml + mu*vx/(vx+vu))*invSqrtVxl
                         // Sqrt(1 - r * r) = Sqrt(vx*vl + vx*vu + vl*vu)*invSqrtVxl*invSqrtVxu
-                        double mx, vx, ml, vl, mu, vu;
-                        X.GetMeanAndVariance(out mx, out vx);
-                        lowerBound.GetMeanAndVariance(out ml, out vl);
-                        upperBound.GetMeanAndVariance(out mu, out vu);
                         ylryu = (mx * vu / (vx + vu) - ml + mu * vx / (vx + vu)) / Math.Sqrt(vx * vl + vx * vu + vl * vu) / invSqrtVxu;
                     }
                     if (useLogZRatio)
@@ -1271,212 +1267,145 @@ namespace Microsoft.ML.Probabilistic.Factors
                 // alphaX = -alphaL - alphaU
                 // = d_p * Math.Exp(-logZRatio) * (invSqrtVxl * NormalCdfRatio(yuryl) - invSqrtVxu * NormalCdfRatio(ylryu))
                 // = d_p * Math.Exp(-logZRatio) * (-invSqrtVxl / yuryl + invSqrtVxu / ylryu)
-                double mx, vx, ml, vl, mu, vu;
-                X.GetMeanAndVariance(out mx, out vx);
-                lowerBound.GetMeanAndVariance(out ml, out vl);
-                upperBound.GetMeanAndVariance(out mu, out vu);
                 //double q = -1 / ((mx + mu) * vl + (mu - ml) * vx) + 1 / ((mx - ml) * vu + (mu - ml) * vx);
                 double q2 = ((ml - mx) * vu + (mx + mu) * vl) / ((mx + mu) * vl + (mu - ml) * vx) / ((mx - ml) * vu + (mu - ml) * vx);
                 alphaX = d_p * Math.Exp(-logZRatio) * Math.Sqrt(vx * vl + vx * vu + vl * vu) * q2;
             }
             ylInvSqrtVxlPlusAlphaX = yl * invSqrtVxl + alphaX;
             yuInvSqrtVxuMinusAlphaX = yu * invSqrtVxu - alphaX;
-            // TODO: make this case smoothly blend into the X.IsPointMass case
-            if (r == -1 || (!Double.IsInfinity(yl) && !Double.IsInfinity(yu) && logZ == MMath.NormalCdfLn(yl, yu, -1)))
+            double invSqrtVxlMinusInvSqrtVxu = invSqrtVxl - invSqrtVxu;
+            if (Math.Abs(invSqrtVxlMinusInvSqrtVxu) < invSqrtVxl * 1e-10)
             {
-                double mx, vx, ml, vl, mu, vu;
-                X.GetMeanAndVariance(out mx, out vx);
-                lowerBound.GetMeanAndVariance(out ml, out vl);
-                upperBound.GetMeanAndVariance(out mu, out vu);
-                // yu + yl = (mu-mx)/sqrt(vx+vu) + (mx-ml)/sqrt(vx+vl) = mu/sqrt(vx+vu) - ml/sqrt(vx+vl) + mx*(1/sqrt(vx+vl) - 1/sqrt(vx+vu))
-                double invSqrtVxlMinusInvSqrtVxu = invSqrtVxl - invSqrtVxu;
-                if (Math.Abs(invSqrtVxlMinusInvSqrtVxu) < invSqrtVxl * 1e-10)
-                {
-                    // Use Taylor expansion:
-                    // f(y) = 1/sqrt(vx+y)
-                    // f'(y) = -0.5/(vx+y)^(3/2)
-                    // f(vl) - f(vu) =approx f(vu) + (vl-vu)*f'(vu)
-                    invSqrtVxlMinusInvSqrtVxu = (vl - vu) * (-0.5) * (invSqrtVxu * invSqrtVxu * invSqrtVxu);
-                }
-                // This is more accurate than (yu+yl)
-                double yuPlusyl = mu * invSqrtVxu - ml * invSqrtVxl + mx * invSqrtVxlMinusInvSqrtVxu;
-                // double delta = Math.Exp(-0.5 * (yu * yu - yl * yl));
-                // This is more accurate than above.
-                double deltaMinus1 = MMath.ExpMinus1(-0.5 * yuPlusyl * (yu - yl));
-                double delta = 1 + deltaMinus1;
-                bool deltaMinus1IsSmall = Math.Abs(deltaMinus1) < 1e-8;
-                if (yl > 0 && yu < 0)
-                {
-                    // This code inlines the following formula for Z:
-                    // Z = NormalCdf(yu) - NormalCdf(-yl)
-                    double ncru = MMath.NormalCdfRatio(yu);
-                    double ncrl = MMath.NormalCdfRatio(-yl);
-                    double ZoverPhiL, ZoverPhiU;
-                    if (deltaMinus1IsSmall)
-                    {
-                        double ncruMinusNcrl = MMath.NormalCdfRatioDiff(-yl, yuPlusyl);
-                        ZoverPhiL = ncruMinusNcrl + ncru * deltaMinus1;
-                        ZoverPhiU = ZoverPhiL / delta;
-                    }
-                    else
-                    {
-                        ZoverPhiL = ncru * delta - ncrl;
-                        ZoverPhiU = ncru - ncrl / delta;
-                    }
-                    alphaL = -d_p * invSqrtVxl / ZoverPhiL;
-                    //alphaU = d_p * invSqrtVxu * delta / ZoverPhiL;
-                    alphaU = d_p * invSqrtVxu / ZoverPhiU;
-                    if (deltaMinus1IsSmall)
-                    {
-                        // alphaX = d_p/ZoverPhiL * (invSqrtVxl - invSqrtVxu * delta)
-                        alphaX = d_p / ZoverPhiL * (invSqrtVxlMinusInvSqrtVxu - invSqrtVxu * deltaMinus1);
-                    }
-                    else
-                    {
-                        alphaX = -alphaL - alphaU;
-                    }
-                    if (d_p == 1)
-                    {
-                        double ncr1u = MMath.NormalCdfMomentRatio(1, yu);
-                        double ncr1l = MMath.NormalCdfMomentRatio(1, -yl);
-                        //   yl * invSqrtVxl + alphaX 
-                        // = yl * invSqrtVxl - alphaL - alphaU
-                        // = invSqrtVxl * (yl + 1/ZoverPhiL) - invSqrtVxu / ZoverPhiU
-                        // = invSqrtVxl * (yl + 1 / ZoverPhiL - 1 / ZoverPhiU) + (invSqrtVxl - invSqrtVxu) / ZoverPhiU
-                        // yl* ZoverPhiL*ZoverPhiU + ZoverPhiU - ZoverPhiL 
-                        // = yl * (ncrl - ncru * delta) * (ncrl / delta - ncru) - ncrl / delta + ncru + ncrl - ncru * delta
-                        // = yl * (ncrl * ncrl / delta - 2 * ncrl * ncru + ncru * ncru * delta) - ncrl / delta + ncru + ncrl - ncru * delta
-                        // = (yl * ncrl - 1) * ncrl / delta + (-yl * ncrl + 1) * ncru + (-yl * ncru + 1) * ncrl + (yl * ncru - 1) * ncru * delta
-                        // = (-yl * ncrl + 1) * (ncru - ncrl / delta) + (yl * ncru - 1) * (ncru * delta - ncrl)
-                        // = (-yl * ncrl + 1) * ZoverPhiU + (yl * ncru - 1) * ZoverPhiL
-                        // yl*ncru-1 = -yu*ncru-1 + (yl + yu) * ncru
-                        // ZoverPhiL = delta*ZoverPhiU
-                        // ZoverPhiU = ZoverPhiL/delta
-                        // yl + 1 / ZoverPhiL - 1 / ZoverPhiU = (yl*ZRatio + Rylryu - Ryuryl)/ZRatio
-                        // = (intZRatio - Rylryu - r*Ryuryl + Rylryu - Ryuryl)/ZRatio
-                        // = intZRatio/ZRatio = intZ/Z
-                        //(-yl * ncrl + 1) * ZoverPhiU + (yl * ncru - 1) * ZoverPhiL;
-                        //ncr1l - ncr1u + yuPlusyl * ncru + (yuPlusyl * ncru - ncr1u) * deltaMinus1;
-                        double intZ = MMath.NormalCdfIntegral(yl, yu, -1);
-                        double Z = MMath.NormalCdf(yu) - MMath.NormalCdf(-yl);
-                        // when r = -1, intZ = yl*Z + N(yl;0,1) - N(yu;0,1)
-                        double intZOverZ3 = intZ / Z;
-                        double intZOverZ4 = MMath.NormalCdfIntegralRatio(yl, yu, -1);
-                        double intZOverZ = yl + 1 / ZoverPhiL - 1 / ZoverPhiU;
-                        double intZOverZ2 = ncr1l / ZoverPhiL + (yuPlusyl * ncru - ncr1u) / ZoverPhiU;
-                        Trace.WriteLine($"intZOverZ = {intZOverZ} {intZOverZ2} {intZOverZ3} {intZOverZ4}");
-                        ylInvSqrtVxlPlusAlphaX = invSqrtVxl * (ncr1l / ZoverPhiL + (yuPlusyl * ncru - ncr1u) / ZoverPhiU) + invSqrtVxlMinusInvSqrtVxu / ZoverPhiU;
-                        //ylInvSqrtVxlPlusAlphaX = invSqrtVxl * (ncr1l + (yuPlusyl * ncru - ncr1u) * delta) / ZoverPhiL + invSqrtVxlMinusInvSqrtVxu / ZoverPhiU;
-                        if (ylInvSqrtVxlPlusAlphaX < 0)
-                            Trace.WriteLine("");
-                        //   yu * invSqrtVxu - alphaX
-                        // = yu * invSqrtVxu + alphaL + alphaU
-                        // = invSqrtVxu * (yu + 1/ZoverPhiU) - invSqrtVxl / ZoverPhiL
-                        // = invSqrtVxu * (yu + 1/ZoverPhiU - 1/ZoverPhiL) - (invSqrtVxl - invSqrtVxu) / ZoverPhiL
-                        // yu*ZoverPhiL*ZoverPhiU + ZoverPhiL - ZoverPhiU
-                        // = yu * (ncrl - ncru * delta) * (ncrl / delta - ncru) + ncrl / delta - ncru - ncrl + ncru * delta
-                        // = yu * (ncrl * ncrl / delta - 2 * ncrl * ncru + ncru * ncru * delta) + ncrl / delta - ncru - ncrl + ncru * delta
-                        // = (yu * ncrl + 1) * ncrl / delta + (-yu * ncrl - 1) * ncru + (-yu * ncru - 1) * ncrl + (yu * ncru + 1) * ncru * delta
-                        // = (yu*ncrl + 1) * (ncrl/delta -ncru) + (yu*ncru+1)*(ncru*delta - ncrl)
-                        // = -(yu*ncrl + 1) * ZoverPhiU + (yu*ncru+1)*ZoverPhiL
-                        // yu*ncrl+1 = -yl*ncrl+1 +(yu+yl)*ncrl = MomentRatio(-yl) + (yu+yl)*ncrl
-                        yuInvSqrtVxuMinusAlphaX = invSqrtVxu * (ncr1u*delta - (yuPlusyl * ncrl + ncr1l)) / ZoverPhiL - invSqrtVxlMinusInvSqrtVxu / ZoverPhiL;
-                    }
-                }
-                else if (yl < 0 && yu > 0)
-                {
-                    // This code inlines the following formula for Z:
-                    // Z = NormalCdf(yl) - NormalCdf(-yu)
-                    double ncru = MMath.NormalCdfRatio(-yu);
-                    double ncrl = MMath.NormalCdfRatio(yl);
-                    double ZoverPhiL, ZoverPhiU;
-                    if (deltaMinus1IsSmall)
-                    {
-                        double ncrlMinusNcru = MMath.NormalCdfRatioDiff(-yu, yuPlusyl);
-                        ZoverPhiL = ncrlMinusNcru - ncru * deltaMinus1;
-                        ZoverPhiU = ZoverPhiL / delta;
-                    }
-                    else
-                    {
-                        ZoverPhiL = ncrl - ncru * delta;
-                        ZoverPhiU = ncrl / delta - ncru;
-                    }
-                    alphaL = -d_p * invSqrtVxl / ZoverPhiL;
-                    //alphaU = d_p * invSqrtVxu * delta / ZoverPhiL;
-                    alphaU = d_p * invSqrtVxu / ZoverPhiU;
-                    if (deltaMinus1IsSmall)
-                    {
-                        // alphaX = d_p/ZoverPhiL * (invSqrtVxl - invSqrtVxu * delta)
-                        alphaX = d_p / ZoverPhiL * (invSqrtVxlMinusInvSqrtVxu - invSqrtVxu * deltaMinus1);
-                    }
-                    else
-                    {
-                        alphaX = -alphaL - alphaU;
-                    }
-                    if (d_p == 1)
-                    {
-                        double ncr1l = MMath.NormalCdfMomentRatio(1, yl);
-                        double ncr1u = MMath.NormalCdfMomentRatio(1, -yu);
-                        //   yl * invSqrtVxl + alphaX 
-                        // = yl * invSqrtVxl - alphaL - alphaU
-                        // = invSqrtVxl * (yl + 1/ZoverPhiL) - invSqrtVxu / ZoverPhiU
-                        // = invSqrtVxl * (yl + 1 / ZoverPhiL - 1 / ZoverPhiU) + (invSqrtVxl - invSqrtVxu) / ZoverPhiU
-                        // yl* ZoverPhiL*ZoverPhiU + ZoverPhiU - ZoverPhiL 
-                        // = yl * (ncrl - ncru * delta) * (ncrl / delta - ncru) + ncrl / delta - ncru - ncrl + ncru * delta
-                        // = yl * (ncrl * ncrl / delta - 2 * ncrl * ncru + ncru * ncru * delta) + ncrl / delta - ncru - ncrl + ncru * delta
-                        // = (yl * ncrl + 1) * ncrl / delta - (yl * ncrl + 1) * ncru - (yl * ncru + 1) * ncrl + (yl * ncru + 1) * ncru * delta
-                        // = (yl * ncrl + 1) * (ncrl / delta - ncru) - (yl * ncru + 1) * (ncrl - ncru * delta)
-                        // yl* ncru+1 = (yl + yu) * ncru - yu * ncru + 1 = (yl + yu) * ncru + MomentRatio(-yu)
-                        ylInvSqrtVxlPlusAlphaX = invSqrtVxl * (ncr1l / ZoverPhiL - (yuPlusyl * ncru + ncr1u) / ZoverPhiU) + invSqrtVxlMinusInvSqrtVxu / ZoverPhiU;
-                        if (yl*ylInvSqrtVxlPlusAlphaX < 0) throw new Exception();
-                        //   yu * invSqrtVxu - alphaX
-                        // = yu * invSqrtVxu + alphaL + alphaU
-                        // = invSqrtVxu * (yu + 1/ZoverPhiU) - invSqrtVxl / ZoverPhiL
-                        // = invSqrtVxu * (yu + 1/ZoverPhiU - 1/ZoverPhiL) - (invSqrtVxl - invSqrtVxu) / ZoverPhiL
-                        // yu*ZoverPhiL*ZoverPhiU + ZoverPhiL - ZoverPhiU
-                        // = yu * (ncrl - ncru * delta) * (ncrl / delta - ncru) - ncrl / delta + ncru + ncrl - ncru * delta
-                        // = yu * (ncrl * ncrl / delta - 2 * ncrl * ncru + ncru * ncru * delta) - ncrl / delta + ncru + ncrl - ncru * delta
-                        // = (yu * ncrl - 1) * ncrl / delta + (-yu * ncrl + 1) * ncru + (-yu * ncru + 1) * ncrl + (yu * ncru - 1) * ncru * delta
-                        // = (yu*ncrl - 1) * (ncrl/delta -ncru) + (-yu*ncru+1)*(ncrl - ncru*delta)
-                        // = (yu*ncrl - 1) * ZoverPhiU + (-yu*ncru+1)*ZoverPhiL
-                        // -yu*ncrl+1 = yl*ncrl+1 -(yu+yl)*ncrl = MomentRatio(yl) - (yu+yl)*ncrl
-                        yuInvSqrtVxuMinusAlphaX = invSqrtVxu * (ncr1u / ZoverPhiU + (yuPlusyl * ncrl - ncr1l) / ZoverPhiL) - invSqrtVxlMinusInvSqrtVxu / ZoverPhiL;
-                        if (double.IsNaN(ylInvSqrtVxlPlusAlphaX)) throw new Exception("ylInvSqrtVxlPlusAlphaX is NaN");
-                        if (double.IsNaN(yuInvSqrtVxuMinusAlphaX)) throw new Exception("yuInvSqrtVxuMinusAlphaX is NaN");
-                    }
-                }
-                if (double.IsNaN(alphaL)) throw new Exception("alphaL is NaN");
-                if (double.IsNaN(alphaU)) throw new Exception("alphaU is NaN");
+                // Use Taylor expansion:
+                // f(y) = 1/sqrt(vx+y)
+                // f'(y) = -0.5/(vx+y)^(3/2)
+                // f(vl) - f(vu) =approx f(vu) + (vl-vu)*f'(vu)
+                invSqrtVxlMinusInvSqrtVxu = (vl - vu) * (-0.5) * (invSqrtVxu * invSqrtVxu * invSqrtVxu);
             }
             if (d_p == 1)
             {
-                double yuryl = (yu - r * yl) / Math.Sqrt(omr2);
-                if (yuryl > 30)
+                double ylInvSqrtVxlPlusAlphaX2 = ylInvSqrtVxlPlusAlphaX;
+                //   yl * invSqrtVxl + alphaX 
+                // = yl * invSqrtVxl - alphaL - alphaU
+                // = invSqrtVxl * (yl + Zx / Z) - invSqrtVxu * Zy / Z
+                // = invSqrtVxl * (yl + Zx / Z - Zy / Z) + (invSqrtVxl - invSqrtVxu) * Zy /Z
+                //   yl + Zx / Z - Zy / Z 
+                // = (yl*Z + Zx - Zy)/Z
+                // = (intZ - Zx - r*Zy + Zx - Zy)/Z
+                // = intZ/Z - (1+r)*Zy/Z
+                double intZOverZ = MMath.NormalCdfIntegralRatio(yl, yu, r);
+                ylInvSqrtVxlPlusAlphaX = invSqrtVxl * intZOverZ + (invSqrtVxlMinusInvSqrtVxu - (1 + r) * invSqrtVxl) / invSqrtVxu * alphaU;
+                //ylInvSqrtVxlPlusAlphaX = -invSqrtVxl / yl;
+                Trace.WriteLine($"ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX} replaces {ylInvSqrtVxlPlusAlphaX2}");
+                //if (double.IsNaN(ylInvSqrtVxlPlusAlphaX)) throw new Exception("ylInvSqrtVxlPlusAlphaX is NaN");
+                // yuInvSqrtVxuMinusAlphaX = yu * invSqrtVxu - alphaX = yu * invSqrtVxu + alphaL
+                // = yu * (invSqrtVxu - invSqrtVxl) + invSqrtVxl*(yu - d_p * Ryuryl / ZRatio)
+                //   yu * invSqrtVxu - alphaX
+                // = yu * invSqrtVxu + alphaL + alphaU
+                // = invSqrtVxu * (yu + Zy / Z) - invSqrtVxl * Zx / Z
+                // = invSqrtVxu * (yu + Zy / Z - Zx / Z) - (invSqrtVxl - invSqrtVxu) * Zx / Z
+                //   yu + Zy / Z - Zx / Z 
+                // = (yu*Z + Zy - Zx)/Z
+                // = (intZ2 - Zy - r*Zx + Zy - Zx)/Z
+                // = intZ2/Z - (1+r)*Zx/Z
+                double yuInvSqrtVxuMinusAlphaX2 = yuInvSqrtVxuMinusAlphaX;
+                double intZ2OverZ = MMath.NormalCdfIntegralRatio(yu, yl, r);
+                yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ - (invSqrtVxlMinusInvSqrtVxu + (1 + r) * invSqrtVxu) / invSqrtVxl * alphaL;
+                Trace.WriteLine($"yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX} replaces {yuInvSqrtVxuMinusAlphaX2}");
+                //if (double.IsNaN(yuInvSqrtVxuMinusAlphaX)) throw new Exception("yuInvSqrtVxuMinusAlphaX is NaN");
+            }
+            // TODO: make this case smoothly blend into the X.IsPointMass case
+            if (r == -1 || (!Double.IsInfinity(yl) && !Double.IsInfinity(yu) && logZ == MMath.NormalCdfLn(yl, yu, -1)))
+            {
+                if ((yl > 0 && yu < 0) || (yl < 0 && yu > 0))
                 {
-                    // In this case, alphaU = 0
-                    // alphaL = -d_p * invSqrtVxl * Ryuryl / ZRatio
-                    // if alphaU = 0 then:
-                    // ylInvSqrtVxlPlusAlphaX = yl * invSqrtVxl - alphaL = invSqrtVxl*(yl + d_p * Ryuryl / ZRatio)
-                    // As yuryl -> infinity, intZRatio -> Ryuryl/(yl*yl+1), 
-                    // ZRatio = (intZRatio - r * Rylryu - Ryuryl) / yl -> -Ryuryl*yl/(yl*yl+1)
-                    // alphaL -> invSqrtVxl*(yl - d_p*(yl*yl+1)/yl)
-                    double ylInvSqrtVxlPlusAlphaX2 = -invSqrtVxl / yl;
-                    if (double.IsNaN(ylInvSqrtVxlPlusAlphaX)) throw new Exception("ylInvSqrtVxlPlusAlphaX is NaN");
-                    Trace.WriteLine($"yuryl = {yuryl} ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX} {ylInvSqrtVxlPlusAlphaX2}");
-                }
-                double ylryu = (yl - r * yu) / Math.Sqrt(omr2);
-                if (ylryu > 30)
-                {
-                    // In this case, alphaL = 0
-                    // alphaU = d_p * invSqrtVxu * Rylryu / ZRatio
-                    // If alphaL = 0 then:
-                    // yuInvSqrtVxuMinusAlphaX = yu * invSqrtVxu + alphaU = invSqrtVxu*(yu + d_p * Rylryu / ZRatio)
-                    // As ylryu -> infinity, intZRatio -> (r * Rylryu - r * Math.Sqrt(omr2) * Rylryu * ylryu * yl) / (yl * yl + 1);
-                    //   r*Rylryu*(1 - (yl - r*yu) * yl) / (yl * yl + 1);
-                    // ZRatio = (intZRatio - r * Rylryu - Ryuryl) / yl -> r*Rylryu*(... yl)/(yl*yl+1)
-                    // alphaU -> invSqrtVxu*(yu + d_p * (yl*yl+1)/(... yl)/r)
-                    double yuInvSqrtVxuMinusAlphaX2 = invSqrtVxu / yu;
-                    //Trace.WriteLine($"ylryu = {ylryu} yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX} {yuInvSqrtVxuMinusAlphaX2}");
+                    Trace.WriteLine("special case for r == -1");
+                    // yu + yl = (mu-mx)/sqrt(vx+vu) + (mx-ml)/sqrt(vx+vl) = mu/sqrt(vx+vu) - ml/sqrt(vx+vl) + mx*(1/sqrt(vx+vl) - 1/sqrt(vx+vu))
+                    // This is more accurate than (yu+yl)
+                    double yuPlusyl = mu * invSqrtVxu - ml * invSqrtVxl + mx * invSqrtVxlMinusInvSqrtVxu;
+                    // double delta = Math.Exp(-0.5 * (yu * yu - yl * yl));
+                    // This is more accurate than above.
+                    double deltaMinus1 = MMath.ExpMinus1(-0.5 * yuPlusyl * (yu - yl));
+                    double delta = 1 + deltaMinus1;
+                    bool deltaMinus1IsSmall = Math.Abs(deltaMinus1) < 1e-8;
+                    double ZoverPhiL, ZoverPhiU;
+                    if (yl > 0 && yu < 0)
+                    {
+                        // This code inlines the following formula for Z:
+                        // Z = NormalCdf(yu) - NormalCdf(-yl)
+                        double ncru = MMath.NormalCdfRatio(yu);
+                        double ncrl = MMath.NormalCdfRatio(-yl);
+                        if (deltaMinus1IsSmall)
+                        {
+                            double ncruMinusNcrl = MMath.NormalCdfRatioDiff(-yl, yuPlusyl);
+                            ZoverPhiL = ncruMinusNcrl + ncru * deltaMinus1;
+                            ZoverPhiU = ZoverPhiL / delta;
+                        }
+                        else
+                        {
+                            ZoverPhiL = ncru * delta - ncrl;
+                            ZoverPhiU = ncru - ncrl / delta;
+                        }
+                    }
+                    else // (yl < 0 && yu > 0)
+                    {
+                        // This code inlines the following formula for Z:
+                        // Z = NormalCdf(yl) - NormalCdf(-yu)
+                        double ncru = MMath.NormalCdfRatio(-yu);
+                        double ncrl = MMath.NormalCdfRatio(yl);
+                        if (deltaMinus1IsSmall)
+                        {
+                            double ncrlMinusNcru = MMath.NormalCdfRatioDiff(-yu, yuPlusyl);
+                            ZoverPhiL = ncrlMinusNcru - ncru * deltaMinus1;
+                            ZoverPhiU = ZoverPhiL / delta;
+                        }
+                        else
+                        {
+                            ZoverPhiL = ncrl - ncru * delta;
+                            ZoverPhiU = ncrl / delta - ncru;
+                        }
+                    }
+                    alphaL = -d_p * invSqrtVxl / ZoverPhiL;
+                    //alphaU = d_p * invSqrtVxu * delta / ZoverPhiL;
+                    alphaU = d_p * invSqrtVxu / ZoverPhiU;
+                    if (deltaMinus1IsSmall)
+                    {
+                        // alphaX = d_p/ZoverPhiL * (invSqrtVxl - invSqrtVxu * delta)
+                        alphaX = d_p / ZoverPhiL * (invSqrtVxlMinusInvSqrtVxu - invSqrtVxu * deltaMinus1);
+                    }
+                    else
+                    {
+                        alphaX = -alphaL - alphaU;
+                    }
+                    if (d_p == 1)
+                    {
+                        //   yl * invSqrtVxl + alphaX 
+                        // = yl * invSqrtVxl - alphaL - alphaU
+                        // = invSqrtVxl * (yl + 1/ZoverPhiL) - invSqrtVxu / ZoverPhiU
+                        // = invSqrtVxl * (yl + 1/ZoverPhiL - 1/ZoverPhiU) + (invSqrtVxl - invSqrtVxu) / ZoverPhiU
+                        // yl + 1/ZoverPhiL - 1/ZoverPhiU = (yl*ZRatio + Rylryu - Ryuryl)/ZRatio
+                        // = (intZRatio - Rylryu - r*Ryuryl + Rylryu - Ryuryl)/ZRatio
+                        // = intZRatio/ZRatio = intZ/Z
+                        double ylInvSqrtVxlPlusAlphaX2 = ylInvSqrtVxlPlusAlphaX;
+                        double intZOverZ = MMath.NormalCdfIntegralRatio(yl, yu, -1);
+                        ylInvSqrtVxlPlusAlphaX = invSqrtVxl * intZOverZ + invSqrtVxlMinusInvSqrtVxu / ZoverPhiU;
+                        Trace.WriteLine($"ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX} replaces {ylInvSqrtVxlPlusAlphaX2}");
+                        if (double.IsNaN(ylInvSqrtVxlPlusAlphaX)) throw new Exception("ylInvSqrtVxlPlusAlphaX is NaN");
+                        //   yu * invSqrtVxu - alphaX
+                        // = yu * invSqrtVxu + alphaL + alphaU
+                        // = invSqrtVxu * (yu + 1/ZoverPhiU) - invSqrtVxl / ZoverPhiL
+                        // = invSqrtVxu * (yu + 1/ZoverPhiU - 1/ZoverPhiL) - (invSqrtVxl - invSqrtVxu) / ZoverPhiL
+                        // yu + 1/ZoverPhiU - 1/ZoverPhiL = (yu*ZRatio + Ryuryl - Rylryu)/ZRatio
+                        // = (intZ2Ratio - r*Rylryu - Ryuryl + Ryuryl - Rylryu)/ZRatio
+                        // = intZ2/Z
+                        double yuInvSqrtVxuMinusAlphaX2 = yuInvSqrtVxuMinusAlphaX;
+                        double intZ2OverZ = MMath.NormalCdfIntegralRatio(yu, yl, -1);
+                        yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ - invSqrtVxlMinusInvSqrtVxu / ZoverPhiL;
+                        Trace.WriteLine($"yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX} replaces {yuInvSqrtVxuMinusAlphaX2}");
+                        if (double.IsNaN(yuInvSqrtVxuMinusAlphaX)) throw new Exception("yuInvSqrtVxuMinusAlphaX is NaN");
+                    }
+                    if (double.IsNaN(alphaL)) throw new Exception("alphaL is NaN");
+                    if (double.IsNaN(alphaU)) throw new Exception("alphaU is NaN");
                 }
             }
         }
