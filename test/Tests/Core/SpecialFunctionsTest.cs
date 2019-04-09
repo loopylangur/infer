@@ -2041,6 +2041,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 {
                     { 0.1, 0.5, -0.9, 0.10185469947015 },
                     { 0.1, 0.5, -0.9999, 0.068051457100492874 },
+                    { 0.5, 0.1, -0.9999, 0.0707976238175565 },
                 };
             CheckFunctionValues("NormalCdfIntegral", new MathFcn3(MMath.NormalCdfIntegral), normalcdfIntegral_pairs);
 
@@ -2058,17 +2059,16 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             double x = 0.0093132267868981222;
             double y = -0.0093132247056551785;        
             double r = -1;
-            x = 0.1;
-            y = 0.5;
-            // c overflows for -0.3 <= r < 0
+            x = 0.5;
+            y = 0.1;
             r = -0.9999;
             double intZ0 = NormalCdfIntegralBasic(x, y, r);
             double intZ = MMath.NormalCdfIntegral(x, y, r);
             Console.WriteLine($"{intZ} {intZ0}");
             double Z = MMath.NormalCdf(x, y, r);
             double intZOverZ0 = intZ / Z;
-            double intZOverZ = MMath.NormalCdfIntegralRatio(x, y, r);
-            Console.WriteLine($"{intZOverZ} {intZOverZ0}");
+            //double intZOverZ = MMath.NormalCdfIntegralRatio(x, y, r);
+            //Console.WriteLine($"{intZOverZ} {intZOverZ0}");
             // after 29000 iters: 1.04062139616797E-09
             //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1) / MMath.NormalCdf(x, y, -1));
             // after 25000 iters: 1.04062147440396E-09
@@ -2088,7 +2088,10 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             double ymrx = (y - r * x) / sqrtomr2;
             double xmry = (x - r * y) / sqrtomr2;
             // should use this whenever x > 0 and Rymrx >= Rxmry (y-r*x >= x-r*y implies y*(1+r) >= x*(1+r) therefore y >= x)
+            // we need a special routine to compute 2nd half without cancellation and without dividing by phir
             // what about x > y > 0?
+            double t = -MMath.NormalCdfIntegral(-x,-y,r) + x * (MMath.NormalCdf(y) - MMath.NormalCdf(-x)) + System.Math.Exp(Gaussian.GetLogProb(x, 0, 1)) + r * System.Math.Exp(Gaussian.GetLogProb(y, 0, 1));
+            Console.WriteLine(t);
             return x * MMath.NormalCdf(x, y, r) + System.Math.Exp(Gaussian.GetLogProb(x, 0, 1) + MMath.NormalCdfLn(ymrx)) + r * System.Math.Exp(Gaussian.GetLogProb(y, 0, 1) + MMath.NormalCdfLn(xmry));
         }
 

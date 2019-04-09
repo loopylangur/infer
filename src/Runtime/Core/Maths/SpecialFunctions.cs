@@ -2647,12 +2647,20 @@ f = 1/gamma(x+1)-1
         {
             double xPlusy = x + y;
             if (xPlusy <= 0 && r == -1) return 0;
+            double logProbX = Gaussian.GetLogProb(x, 0, 1);
+            double logProbY = Gaussian.GetLogProb(y, 0, 1);
+            if (y > x && y > -x && x > 0)
+            {
+                double n;
+                if (r >= 0) n = Math.Exp(logProbX) + r * Math.Exp(logProbY);
+                else n = (ExpMinus1(xPlusy * (y - x) / 2) + (1 + r)) * Math.Exp(logProbY);
+                return -NormalCdfIntegral(-x, -y, r) + x * (NormalCdf(y) - NormalCdf(-x)) + n;
+            }
             double omr2 = 1 - r * r;
             double sqrtomr2 = Math.Sqrt(omr2);
             double ymrx = (y - r * x) / sqrtomr2;
             double xmry = (x - r * y) / sqrtomr2;
-            double exponent = Gaussian.GetLogProb(x, 0, 1);
-            double logProbY = Gaussian.GetLogProb(y, 0, 1);
+            double exponent = logProbX;
             double c = Math.Exp(logProbY);
             double numer = 0;
             // Negating here avoids negation in the loop.
@@ -2661,7 +2669,7 @@ f = 1/gamma(x+1)-1
             IEnumerator<double> RxmryIter;
             if (r == -1)
             {
-                // phix - phiy
+                // N(x;0,1) - N(y;0,1)
                 numerPrev = ExpMinus1(xPlusy * (y - x) / 2) * c;
                 RxmryIter = null;
             }
