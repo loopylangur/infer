@@ -82,7 +82,8 @@ namespace TestApp
             watch.Start();
 
             //new SpecialFunctionsTests().NormalCdf2Test();
-            new OperatorTests().GaussianIsBetweenCRRR_SmallXPrecisionTest();
+            new SpecialFunctionsTests().NormalCdfIntegralTest();
+            //new OperatorTests().GaussianIsBetweenCRRR_SmallXPrecisionTest();
 
             if (false)
             {

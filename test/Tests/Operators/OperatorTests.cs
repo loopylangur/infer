@@ -2942,20 +2942,6 @@ weight * (tau + alphaX) + alphaX
         [Fact]
         public void GaussianIsBetweenCRRR_SmallXPrecisionTest()
         {
-            double x =  0.0093132267868981222;
-            double y = -0.0093132247056551785;
-            Console.WriteLine(MMath.NormalCdf(x, y, -1));
-            // after 29000 iters: 1.04062139616797E-09
-            //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1) / MMath.NormalCdf(x, y, -1));
-            // after 25000 iters: 1.04062147440396E-09
-            Console.WriteLine(MMath.NormalCdfIntegralRatio(x, y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegralRatio(x, -y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegralRatio(y, x, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegral(-x, -y, -1) / MMath.NormalCdf(-x, -y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1)/MMath.NormalCdf(x, y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, -y, -1));
-
             Gaussian lowerBound = Gaussian.FromNatural(-102.3311202057678, 91.572320438929935);
             Gaussian upperBound = Gaussian.FromNatural(102.27224205502382, 91.541070478258376);
             foreach (var mean in new[] { /*1e7,*/ -1e7 })
