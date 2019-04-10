@@ -2039,18 +2039,26 @@ exp(x*x/4)*pcfu(0.5+n,-x)
 
             double[,] normalcdfIntegral_pairs = new double[,]
                 {
-                    { 0.1, 0.5, -0.9, 0.10185469947015 },
+                    { -8, 8.4, -1, 6.3985926111712448E-17 }, // confrac converges rapidly
+                    { -2499147.006377392, 2499147.273918618, -1, 0 },
+                    { 50, 0.5, -1, 34.221057736936238 }, // 461
+                    { 5, 0.5, -1, 3.1052470330674216 }, // 77
+                    { 0.5, 0.5, -1, 0.19146246127401312 }, // 29
+                    { -0.4999, 0.5, -0.9999, 1.7769677765819788E-05 },
+                    { -0.4999, 0.5, -1, 1.7603559714981849E-09 },
+                    { -0.499, 0.5, -1, 1.7606199115326087E-07 },
+                    { -0.49, 0.5, -1, 1.7632494692370611E-05 },
+                    { 0.1, 0.5, -0.9, 0.10185469947014977 },
                     { 0.1, 0.5, -0.9999, 0.068051457100492874 },
                     { 0.1, 0.5, -1, 0.06801625056781653 },
                     { 0.1, -0.5, -1, 0 },
-                    { 0.1, -0.5, -0.9999, 2.55671491055948E-183 },
+                    { 0.1, -0.5, -0.9999, 2.5567149109314317E-183 },
                     { 0.1, -0.5, 0.9999, 0.38288387410422181 },
                     { 0.5, 0.1, -1, 0.0707579285628088 },
                     { 0.5, 0.1, -0.9999, 0.0707976238175565 },
                     { 0.5, 0.1, 0.9999, 0.666826770860778 },
                     { -0.5, 0.1, -1, 0 },
-                    { -0.5, 0.1, -0.9999, 2.55633330958091E-183 },
-                    { -0.4999, 0.5, -1, 1.76035597610383E-09 }, // 1.76035586108014E-09
+                    { -0.5, 0.1, -0.9999, 2.5563333094766041E-183 },
                     { -0.1, 0.5, -1, 0.0297237583130139 },
                     { -0.1, 0.5, -0.9999, 0.029758964845705 },
                     { -0.1, -0.5, 0.9999, 0.32117636635902441 },
@@ -2060,39 +2068,48 @@ exp(x*x/4)*pcfu(0.5+n,-x)
 
             double[,] normalcdfIntegralRatio_pairs = new double[,]
                 {
+                    //{ -2499147.006377392, 2499147.273918618, -1, 0 },
                     { 0.1, 0.5, -0.9, 0.426708959089942 },
                     { 0.1, 0.5, -0.9999, 0.29422529836665412 },
                 };
-            //CheckFunctionValues("NormalCdfIntegralRatio", new MathFcn3(MMath.NormalCdfIntegralRatio), normalcdfIntegralRatio_pairs);
+            CheckFunctionValues("NormalCdfIntegralRatio", new MathFcn3(MMath.NormalCdfIntegralRatio), normalcdfIntegralRatio_pairs);
         }
 
         [Fact]
         public void NormalCdfIntegralTest()
         {
             double x = 0.0093132267868981222;
-            double y = -0.0093132247056551785;        
+            double y = -0.0093132247056551785;
             double r = -1;
-            x = -0.4999;
-            y = 0.5;
-            r = -1;
-            double intZ0 = NormalCdfIntegralBasic(x, y, r);
-            double intZ = MMath.NormalCdfIntegral(x, y, r);
-            Console.WriteLine($"{intZ} {intZ0}");
-            double Z = MMath.NormalCdf(x, y, r);
-            double logZ = MMath.NormalCdfLn(x, y, r);
-            double intZOverZ0 = intZ / Z;
-            //double intZOverZ = MMath.NormalCdfIntegralRatio(x, y, r);
-            //Console.WriteLine($"{intZOverZ} {intZOverZ0}");
-            // after 29000 iters: 1.04062139616797E-09
-            //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1) / MMath.NormalCdf(x, y, -1));
-            // after 25000 iters: 1.04062147440396E-09
-            //Console.WriteLine(MMath.NormalCdfIntegralRatio(x, y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegralRatio(x, -y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegralRatio(y, x, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegral(-x, -y, -1) / MMath.NormalCdf(-x, -y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1)/MMath.NormalCdf(x, y, -1));
-            //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, -y, -1));
+            x = -2499147.006377392;
+            y = 2499147.273918618;
+            for (int i = 0; i < 10; i++)
+            {
+                x = 2.1*(i+1);
+                y = -2*(i+1);
+                x = -2 * (i + 1);
+                y = 2.1 * (i + 1);
+                r = -1;
+                double intZ0 = NormalCdfIntegralBasic(x, y, r);
+                double intZ = MMath.NormalCdfIntegral(x, y, r);
+                Console.WriteLine($"{intZ} {intZ0}");
+                if (intZ < 0) throw new Exception();
+                double Z = MMath.NormalCdf(x, y, r);
+                double logZ = MMath.NormalCdfLn(x, y, r);
+                double intZOverZ0 = intZ / Z;
+                double intZOverZ = MMath.NormalCdfIntegralRatio(x, y, r);
+                Console.WriteLine($"{intZOverZ} {intZOverZ0}");
+                // after 29000 iters: 1.04062139616797E-09
+                //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1) / MMath.NormalCdf(x, y, -1));
+                // after 25000 iters: 1.04062147440396E-09
+                //Console.WriteLine(MMath.NormalCdfIntegralRatio(x, y, -1));
+                //Console.WriteLine(MMath.NormalCdfIntegralRatio(x, -y, -1));
+                //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, y, -1));
+                //Console.WriteLine(MMath.NormalCdfIntegralRatio(y, x, -1));
+                //Console.WriteLine(MMath.NormalCdfIntegral(-x, -y, -1) / MMath.NormalCdf(-x, -y, -1));
+                //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1)/MMath.NormalCdf(x, y, -1));
+                //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, -y, -1));
+            }
         }
 
         private double NormalCdfIntegralBasic(double x, double y, double r)
@@ -23683,7 +23700,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 if (!double.IsNaN(result) && System.Math.Sign(result) != System.Math.Sign(fx) && fx != 0)
                 {
                     string strMsg = $"{name}({x:r})\t has wrong sign (result = {result:r})";
-                    Console.WriteLine(strMsg);
+                    Trace.WriteLine(strMsg);
                     Assert.True(false, strMsg);
                 }
                 double err = System.Math.Abs(result - fx);
@@ -23699,12 +23716,12 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 }
                 if (err < TOLERANCE)
                 {
-                    Console.WriteLine("{0}({1})\t ok", name, x.ToString("r"));
+                    Trace.WriteLine($"{name}({x:r})\t ok");
                 }
                 else
                 {
                     string strMsg = $"{name}({x:r})\t wrong by {err.ToString("g2")} (result = {result:r})";
-                    Console.WriteLine(strMsg);
+                    Trace.WriteLine(strMsg);
                     if (err > assertTolerance || double.IsNaN(err))
                         Assert.True(false, strMsg);
                 }
