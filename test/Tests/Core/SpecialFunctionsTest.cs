@@ -2041,7 +2041,20 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 {
                     { 0.1, 0.5, -0.9, 0.10185469947015 },
                     { 0.1, 0.5, -0.9999, 0.068051457100492874 },
+                    { 0.1, 0.5, -1, 0.06801625056781653 },
+                    { 0.1, -0.5, -1, 0 },
+                    { 0.1, -0.5, -0.9999, 2.55671491055948E-183 },
+                    { 0.1, -0.5, 0.9999, 0.38288387410422181 },
+                    { 0.5, 0.1, -1, 0.0707579285628088 },
                     { 0.5, 0.1, -0.9999, 0.0707976238175565 },
+                    { 0.5, 0.1, 0.9999, 0.666826770860778 },
+                    { -0.5, 0.1, -1, 0 },
+                    { -0.5, 0.1, -0.9999, 2.55633330958091E-183 },
+                    { -0.4999, 0.5, -1, 1.76035597610383E-09 }, // 1.76035586108014E-09
+                    { -0.1, 0.5, -1, 0.0297237583130139 },
+                    { -0.1, 0.5, -0.9999, 0.029758964845705 },
+                    { -0.1, -0.5, 0.9999, 0.32117636635902441 },
+                    { -0.1, -1, 0.9999, 0.22608100205354575 },
                 };
             CheckFunctionValues("NormalCdfIntegral", new MathFcn3(MMath.NormalCdfIntegral), normalcdfIntegral_pairs);
 
@@ -2050,7 +2063,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     { 0.1, 0.5, -0.9, 0.426708959089942 },
                     { 0.1, 0.5, -0.9999, 0.29422529836665412 },
                 };
-            CheckFunctionValues("NormalCdfIntegralRatio", new MathFcn3(MMath.NormalCdfIntegralRatio), normalcdfIntegralRatio_pairs);
+            //CheckFunctionValues("NormalCdfIntegralRatio", new MathFcn3(MMath.NormalCdfIntegralRatio), normalcdfIntegralRatio_pairs);
         }
 
         [Fact]
@@ -2059,13 +2072,14 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             double x = 0.0093132267868981222;
             double y = -0.0093132247056551785;        
             double r = -1;
-            x = 0.5;
-            y = 0.1;
-            r = -0.9999;
+            x = -0.4999;
+            y = 0.5;
+            r = -1;
             double intZ0 = NormalCdfIntegralBasic(x, y, r);
             double intZ = MMath.NormalCdfIntegral(x, y, r);
             Console.WriteLine($"{intZ} {intZ0}");
             double Z = MMath.NormalCdf(x, y, r);
+            double logZ = MMath.NormalCdfLn(x, y, r);
             double intZOverZ0 = intZ / Z;
             //double intZOverZ = MMath.NormalCdfIntegralRatio(x, y, r);
             //Console.WriteLine($"{intZOverZ} {intZOverZ0}");
@@ -2090,9 +2104,10 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             // should use this whenever x > 0 and Rymrx >= Rxmry (y-r*x >= x-r*y implies y*(1+r) >= x*(1+r) therefore y >= x)
             // we need a special routine to compute 2nd half without cancellation and without dividing by phir
             // what about x > y > 0?
-            double t = -MMath.NormalCdfIntegral(-x,-y,r) + x * (MMath.NormalCdf(y) - MMath.NormalCdf(-x)) + System.Math.Exp(Gaussian.GetLogProb(x, 0, 1)) + r * System.Math.Exp(Gaussian.GetLogProb(y, 0, 1));
-            Console.WriteLine(t);
+            //double t = MMath.NormalCdfIntegral(-x, y, -r) + x * MMath.NormalCdf(y) + r * System.Math.Exp(Gaussian.GetLogProb(y, 0, 1));
+            //Console.WriteLine(t);
             return x * MMath.NormalCdf(x, y, r) + System.Math.Exp(Gaussian.GetLogProb(x, 0, 1) + MMath.NormalCdfLn(ymrx)) + r * System.Math.Exp(Gaussian.GetLogProb(y, 0, 1) + MMath.NormalCdfLn(xmry));
+            //return y * MMath.NormalCdf(x, y, r) + r * System.Math.Exp(Gaussian.GetLogProb(x, 0, 1) + MMath.NormalCdfLn(ymrx)) + System.Math.Exp(Gaussian.GetLogProb(y, 0, 1) + MMath.NormalCdfLn(xmry));
         }
 
         [Fact]

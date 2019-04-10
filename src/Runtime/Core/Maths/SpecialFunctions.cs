@@ -2646,16 +2646,30 @@ f = 1/gamma(x+1)-1
         public static double NormalCdfIntegral(double x, double y, double r)
         {
             double xPlusy = x + y;
-            if (xPlusy <= 0 && r == -1) return 0;
+            if (xPlusy <= 0 && AreEqual(r, -1)) return 0;
             double logProbX = Gaussian.GetLogProb(x, 0, 1);
             double logProbY = Gaussian.GetLogProb(y, 0, 1);
-            if (y > x && y > -x && x > 0)
+            if (x - r * y > 0)
             {
-                double n;
-                if (r >= 0) n = Math.Exp(logProbX) + r * Math.Exp(logProbY);
-                else n = (ExpMinus1(xPlusy * (y - x) / 2) + (1 + r)) * Math.Exp(logProbY);
-                return -NormalCdfIntegral(-x, -y, r) + x * (NormalCdf(y) - NormalCdf(-x)) + n;
+                // ensure x-ry <= 0 
+                if(y > -x)
+                {
+                    double n;
+                    if (r >= 0) n = Math.Exp(logProbX) + r * Math.Exp(logProbY);
+                    else n = (ExpMinus1(xPlusy * (y - x) / 2) + (1 + r)) * Math.Exp(logProbY);
+                    // recursive call has x-ry < 0
+                    return -NormalCdfIntegral(-x, -y, r) + x * (NormalCdf(y) - NormalCdf(-x)) + n;
+                }
+                else // y <= -x
+                {
+                    // recursive call has x-ry < 0
+                    return NormalCdfIntegral(-x, y, -r) + x * NormalCdf(y) + r * Math.Exp(logProbY);
+                    // This transformation doesn't help
+                    //return -NormalCdfIntegral(x, -y, -r) + x * NormalCdf(x) + Math.Exp(logProbX);
+                }
             }
+            // r cannot be -1 here
+            if (AreEqual(r, -1)) throw new Exception();
             double omr2 = 1 - r * r;
             double sqrtomr2 = Math.Sqrt(omr2);
             double ymrx = (y - r * x) / sqrtomr2;
@@ -2709,7 +2723,7 @@ f = 1/gamma(x+1)-1
                     if (i % 2 == 1)
                     {
                         double result = numer / denom;
-                        Trace.WriteLine($"iter {i}: result={result:r} c={c:g4} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
+                        //Trace.WriteLine($"iter {i}: result={result:r} c={c:g4} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
                         if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || double.IsInfinity(denom) || double.IsInfinity(numer) || i >= 1000)
                             throw new Exception($"NormalCdfIntegral not converging for x={x:r} y={y:r} r={r:r}");
                         if (AreEqual(result, resultPrev))
@@ -2775,7 +2789,7 @@ f = 1/gamma(x+1)-1
                     if (i % 2 == 1)
                     {
                         double result = numer / denom;
-                        Trace.WriteLine($"iter {i}: result={result:r} cOdd={cOdd:g4} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
+                        //Trace.WriteLine($"iter {i}: result={result:r} cOdd={cOdd:g4} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
                         if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 10000)
                             throw new Exception($"NormalCdfIntegral not converging for x={x:r} y={y:r} r={r:r}");
                         if (AreEqual(result, resultPrev))
@@ -2891,7 +2905,7 @@ f = 1/gamma(x+1)-1
                     {
                         double result = numer / denom;
                         Trace.WriteLine($"iter {i}: result={result:r} cOdd={cOdd:g4} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
-                        if ((result > double.MaxValue) || double.IsNaN(result) /*|| result < 0*/ || double.IsInfinity(denom) || double.IsInfinity(numer) || i >= 10000)
+                        if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || double.IsInfinity(denom) || double.IsInfinity(numer) || i >= 10000)
                             throw new Exception($"NormalCdfIntegralRatio not converging for x={x:r} y={y:r} r={r:r}");
                         if (AreEqual(result, resultPrev))
                             break;
