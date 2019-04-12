@@ -2764,6 +2764,38 @@ f = 1/gamma(x+1)-1
         /// <returns>r such that r*exp(exponent) is the integral</returns>
         public static double NormalCdfIntegral(double x, double y, double r, out double exponent)
         {
+            if (AreEqual(r, 0))
+            {
+                double result = NormalCdf(x, y, r, out exponent);
+                if (x > 0)
+                {
+                    // (x*phi(x) + N(x))/phi(x) = x + N(x)/phi(x)
+                    result *= x + 1 / NormalCdfRatio(x);
+                }
+                else
+                {
+                    // x + 1/R(x) = (x*R(x)+1)/R(x)
+                    result *= NormalCdfMomentRatio(1, x) / NormalCdfRatio(x);
+                }
+                return result;
+            }
+            if ((x >= 0 && r >= 0) || (x > -1 && Math.Abs(r) < 0.5))
+            {
+                double result = x * NormalCdf(x, y, r, out exponent);
+                double omr2 = 1 - r * r;
+                double sqrtomr2 = System.Math.Sqrt(omr2);
+                double ymrx = (y - r * x) / sqrtomr2;
+                double xmry = (x - r * y) / sqrtomr2;
+                double phiy = NormalCdf(ymrx, out double exponentY);
+                exponentY += Gaussian.GetLogProb(x, 0, 1);
+                double phix = NormalCdf(xmry, out double exponentX);
+                exponentX += Gaussian.GetLogProb(y, 0, 1);
+                result = Sum(result, exponent, phiy, exponentY, out exponent);
+                result = Sum(result, exponent, r * phix, exponentX, out exponent);
+                // This is accurate when x >= 0 and r >= 0
+                //return x * MMath.NormalCdf(x, y, r) + System.Math.Exp(Gaussian.GetLogProb(x, 0, 1) + MMath.NormalCdfLn(ymrx)) + r * System.Math.Exp(Gaussian.GetLogProb(y, 0, 1) + MMath.NormalCdfLn(xmry));
+                return result;
+            }
             bool rIsMinus1 = AreEqual(r, -1);
             double xPlusy = x + y;
             if (xPlusy <= 0 && rIsMinus1)
@@ -2779,6 +2811,8 @@ f = 1/gamma(x+1)-1
                 // ensure x-ry <= 0 
                 if (y > -x)
                 {
+                    // Apply the identity NormalCdfIntegral(x,y,r) = 
+                    // -NormalCdfIntegral(-x,-y,r) + x * (NormalCdf(y) - NormalCdf(-x)) + N(x;0,1) + r * N(y;0,1)
                     double Z = NormalCdfDiff(y, xPlusy, out double exponentZ);
                     // logProbX - logProbY = -x^2/2 + y^2/2 = (y+x)*(y-x)/2
                     double n, exponentN;
@@ -2799,6 +2833,8 @@ f = 1/gamma(x+1)-1
                 }
                 else // y <= -x
                 {
+                    // Apply the identity NormalCdfIntegral(x,y,r) = 
+                    // NormalCdfIntegral(-x,y,-r) + x * NormalCdf(y) + r * N(y;0,1)
                     // recursive call has x-ry < 0
                     double result = NormalCdfIntegral(-x, y, -r, out exponent);
                     double Z = NormalCdf(y, out double exponentZ);

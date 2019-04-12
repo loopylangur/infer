@@ -2052,6 +2052,12 @@ exp(x*x/4)*pcfu(0.5+n,-x)
 
             double[,] normalcdfIntegral_pairs = new double[,]
                 {
+                    { -0.1, 0.5, -0.1, 0.22610911461618027 }, // 0.233962568815606
+                    { -0.33333333333333331, -1.5, 0.16666666666666666, 0.02599549974965194 }, // 0.022270228761468
+                    { -0.33333333333333331, 1.5, -0.16666666666666666, 0.22824061454942 }, // 0.2319658855376
+                    { 1003, -1001, 0, 0 },
+                    { -1001, double.PositiveInfinity, 0, MMath.NormalCdfMomentRatio(1, -1001)*System.Math.Exp(Gaussian.GetLogProb(-1001,0,1)) },
+                    { -0.5, double.PositiveInfinity, 0.1, MMath.NormalCdfMomentRatio(1, -0.5)*System.Math.Exp(Gaussian.GetLogProb(-0.5,0,1)) },
                     { 0.5, 0.1, 0.9999, 0.666826770860778 },
                     { -0.013170888687821042, 0.013170891631143039, -1, 1.7278974097756908E-18 },
                     { -2499147.006377392, 2499147.273918618, -1, 0 },
@@ -2096,17 +2102,26 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             double x = 0.0093132267868981222;
             double y = -0.0093132247056551785;
             double r = -1;
-            x = -2499147.006377392;
-            y = 2499147.273918618;
-            for (int i = 10; i < 20; i++)
+            y = -2499147.006377392;
+            x = 2499147.273918618;
+            for (int i = 0; i < 1; i++)
             {
-                x = 2.1 * (i + 1);
-                y = -2 * (i + 1);
-                x = -2 * (i + 1);
-                y = 2.1 * (i + 1);
+                //x = 2.1 * (i + 1);
+                //y = -2 * (i + 1);
+                //x = -2 * (i + 1);
+                //y = 2.1 * (i + 1);
                 //x = -System.Math.Pow(10, -i);
                 //y = -x * 1.1;
-                r = -1;
+                //r = -1 + System.Math.Pow(10, -i);
+                x = -0.33333333333333331;
+                y = -1.5;
+                r = 0.16666666666666666;
+                x = -0.4999;
+                y = 0.5;
+                x = -0.1;
+                y = 0.5;
+                r = -0.1;
+
                 Trace.WriteLine($"(x,y,r) = {x:r}, {y:r}, {r:r}");
                 double intZ0 = NormalCdfIntegralBasic(x, y, r);
                 double intZ = MMath.NormalCdfIntegral(x, y, r);
@@ -2127,7 +2142,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 else
                 {
                     double xmry = (x - r * y) / System.Math.Sqrt(omr2);
-                    logCommon = Gaussian.GetLogProb(System.Math.Min(y, 0), 0, 1) + Gaussian.GetLogProb(x-r*y, 0, omr2);
+                    logCommon = Gaussian.GetLogProb(System.Math.Min(y, 0), 0, 1) + Gaussian.GetLogProb(x - r * y, 0, omr2);
                 }
                 double intZOverZ0 = intZ * System.Math.Exp(-logZ);
                 double intZOverZ = MMath.NormalCdfIntegralRatio(x, y, r);

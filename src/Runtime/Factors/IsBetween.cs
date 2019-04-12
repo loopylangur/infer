@@ -1294,9 +1294,12 @@ namespace Microsoft.ML.Probabilistic.Factors
                 // = (intZ - Zx - r*Zy + Zx - Zy)/Z
                 // = intZ/Z - (1+r)*Zy/Z
                 double intZOverZ = MMath.NormalCdfIntegralRatio(yl, yu, r);
-                ylInvSqrtVxlPlusAlphaX = invSqrtVxl * intZOverZ + (invSqrtVxlMinusInvSqrtVxu - (1 + r) * invSqrtVxl) / invSqrtVxu * alphaU;
+                if (r == 0)
+                    ylInvSqrtVxlPlusAlphaX = invSqrtVxl * intZOverZ - alphaU;
+                else
+                    ylInvSqrtVxlPlusAlphaX = invSqrtVxl * intZOverZ + (invSqrtVxlMinusInvSqrtVxu - (1 + r) * invSqrtVxl) / invSqrtVxu * alphaU;
                 //ylInvSqrtVxlPlusAlphaX = -invSqrtVxl / yl;
-                Trace.WriteLine($"ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX} replaces {ylInvSqrtVxlPlusAlphaX2} (alphaU = {alphaU}, r = {r}, yl = {yl})");
+                Trace.WriteLine($"ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX} replaces {ylInvSqrtVxlPlusAlphaX2} (intZOverZ = {intZOverZ}, alphaU = {alphaU}, r = {r}, yl = {yl})");
                 //if (double.IsNaN(ylInvSqrtVxlPlusAlphaX)) throw new Exception("ylInvSqrtVxlPlusAlphaX is NaN");
                 // yuInvSqrtVxuMinusAlphaX = yu * invSqrtVxu - alphaX = yu * invSqrtVxu + alphaL
                 // = yu * (invSqrtVxu - invSqrtVxl) + invSqrtVxl*(yu - d_p * Ryuryl / ZRatio)
@@ -1310,12 +1313,15 @@ namespace Microsoft.ML.Probabilistic.Factors
                 // = intZ2/Z - (1+r)*Zx/Z
                 double yuInvSqrtVxuMinusAlphaX2 = yuInvSqrtVxuMinusAlphaX;
                 double intZ2OverZ = MMath.NormalCdfIntegralRatio(yu, yl, r);
-                yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ - (invSqrtVxlMinusInvSqrtVxu + (1 + r) * invSqrtVxu) / invSqrtVxl * alphaL;
-                Trace.WriteLine($"yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX} replaces {yuInvSqrtVxuMinusAlphaX2} (alphaL = {alphaL})");
+                if (r == 0)
+                    yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ - alphaL;
+                else
+                    yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ - (invSqrtVxlMinusInvSqrtVxu + (1 + r) * invSqrtVxu) / invSqrtVxl * alphaL;
+                Trace.WriteLine($"yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX} replaces {yuInvSqrtVxuMinusAlphaX2} (intZ2OverZ = {intZ2OverZ}, alphaL = {alphaL})");
                 //if (double.IsNaN(yuInvSqrtVxuMinusAlphaX)) throw new Exception("yuInvSqrtVxuMinusAlphaX is NaN");
             }
             // TODO: make this case smoothly blend into the X.IsPointMass case
-            if (r == -1 || (!Double.IsInfinity(yl) && !Double.IsInfinity(yu) && logZ == MMath.NormalCdfLn(yl, yu, -1)))
+            if (string.Empty.Length > 0)//(r == -1 || (!Double.IsInfinity(yl) && !Double.IsInfinity(yu) && logZ == MMath.NormalCdfLn(yl, yu, -1)))
             {
                 if ((yl > 0 && yu < 0) || (yl < 0 && yu > 0))
                 {
@@ -1389,7 +1395,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                         double ylInvSqrtVxlPlusAlphaX2 = ylInvSqrtVxlPlusAlphaX;
                         double intZOverZ = MMath.NormalCdfIntegralRatio(yl, yu, -1);
                         ylInvSqrtVxlPlusAlphaX = invSqrtVxl * intZOverZ + invSqrtVxlMinusInvSqrtVxu / ZoverPhiU;
-                        Trace.WriteLine($"ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX} replaces {ylInvSqrtVxlPlusAlphaX2} (alphaU = {alphaU})");
+                        Trace.WriteLine($"ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX} replaces {ylInvSqrtVxlPlusAlphaX2} (intZOverZ = {intZOverZ}, alphaU = {alphaU})");
                         if (double.IsNaN(ylInvSqrtVxlPlusAlphaX)) throw new Exception("ylInvSqrtVxlPlusAlphaX is NaN");
                         //   yu * invSqrtVxu - alphaX
                         // = yu * invSqrtVxu + alphaL + alphaU
@@ -1401,7 +1407,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                         double yuInvSqrtVxuMinusAlphaX2 = yuInvSqrtVxuMinusAlphaX;
                         double intZ2OverZ = MMath.NormalCdfIntegralRatio(yu, yl, -1);
                         yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ - invSqrtVxlMinusInvSqrtVxu / ZoverPhiL;
-                        Trace.WriteLine($"yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX} replaces {yuInvSqrtVxuMinusAlphaX2} (alphaL = {alphaL})");
+                        Trace.WriteLine($"yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX} replaces {yuInvSqrtVxuMinusAlphaX2} (intZ2OverZ = {intZ2OverZ}, alphaL = {alphaL})");
                         if (double.IsNaN(yuInvSqrtVxuMinusAlphaX)) throw new Exception("yuInvSqrtVxuMinusAlphaX is NaN");
                     }
                     if (double.IsNaN(alphaL)) throw new Exception("alphaL is NaN");

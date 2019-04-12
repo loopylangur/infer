@@ -2944,7 +2944,7 @@ weight * (tau + alphaX) + alphaX
         {
             Gaussian lowerBound = Gaussian.FromNatural(-102.3311202057678, 91.572320438929935);
             Gaussian upperBound = Gaussian.FromNatural(102.27224205502382, 91.541070478258376);
-            foreach (var mean in new[] { /*1e7,*/ -1e7 })
+            foreach (var mean in new[] { 1e7, -1e7 })
             {
                 Gaussian toLowerBoundPrev = Gaussian.FromNatural(double.MaxValue, double.MaxValue);
                 Gaussian toXPrev = Gaussian.FromNatural(double.MaxValue, double.MaxValue);
