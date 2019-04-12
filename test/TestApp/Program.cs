@@ -81,8 +81,9 @@ namespace TestApp
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
-            //new SpecialFunctionsTests().NormalCdf2Test();
-            new SpecialFunctionsTests().NormalCdfIntegralTest();
+            //new SpecialFunctionsTests().NormalCdf2Test2();
+            new SpecialFunctionsTests().NormalCdf2Test();
+            //new SpecialFunctionsTests().NormalCdfIntegralTest();
             //new OperatorTests().GaussianIsBetweenCRRR_SmallXPrecisionTest();
 
             if (false)
