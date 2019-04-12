@@ -2563,21 +2563,43 @@ f = 1/gamma(x+1)-1
             double numer;
             IEnumerator<double> RxmryIter;
             double probYScaled;
+            bool useNumerPrevPlusC = false;
+            double numerPrevPlusC = double.NaN;
             if (rIsMinus1)
             {
-                // N(x;0,1) - N(y;0,1)
+                // numer = probYScaled * scale * (N(x;0,1) - N(y;0,1))/N(y;0,1)
+                // C = probYScaled * scale * r * x * xPlusy
                 if (y <= x)
                 {
                     // normalize by N(y;0,1)
-                    numer = ExpMinus1(xPlusy * (y - x) / 2) * scale;
+                    double delta = xPlusy * (y - x) / 2;
+                    numer = ExpMinus1(delta) * scale;
                     probYScaled = 1;
+                    if (integral)
+                    {
+                        // Avoid cancellation in numerPrev + C  = C - numer
+                        double expMinus1RatioMinus1RatioMinusHalf = MMath.ExpMinus1RatioMinus1RatioMinusHalf(delta);
+                        double expMinus1RatioMinus1 = delta * (0.5 + expMinus1RatioMinus1RatioMinusHalf);
+                        numerPrevPlusC = -scale * (delta * expMinus1RatioMinus1 + xPlusy * xPlusy / 2);
+                        useNumerPrevPlusC = true;
+                    }
                 }
                 else
                 {
                     // normalize by N(x;0,1)
-                    numer = -ExpMinus1(xPlusy * (x - y) / 2) * scale;
+                    double delta = xPlusy * (x - y) / 2;
+                    double probYScaledMinus1 = ExpMinus1(delta);
+                    numer = -probYScaledMinus1 * scale;
                     // N(y;0,1)/N(x;0,1)
-                    probYScaled = Math.Exp(xPlusy * (x - y) / 2);
+                    probYScaled = probYScaledMinus1 + 1;
+                    if (integral)
+                    {
+                        // Avoid cancellation in numerPrev + C = C - numer
+                        double expMinus1RatioMinus1RatioMinusHalf = MMath.ExpMinus1RatioMinus1RatioMinusHalf(delta);
+                        double expMinus1RatioMinus1 = delta * (0.5 + expMinus1RatioMinus1RatioMinusHalf);
+                        numerPrevPlusC = -scale * (-delta * expMinus1RatioMinus1 + xPlusy * (xPlusy / 2 + x * probYScaledMinus1));
+                        useNumerPrevPlusC = true;
+                    }
                 }
                 RxmryIter = null;
             }
@@ -2631,15 +2653,22 @@ f = 1/gamma(x+1)-1
                 if (integral) c *= x;
                 if (i % 2 == 1)
                 {
-                    if (i > 1)
+                    if (i == 1 && useNumerPrevPlusC)
                     {
-                        if (rIsMinus1)
-                            cOdd *= xPlusy2 / i;
-                        else
-                            cOdd *= (i - 1) * omr2;
+                        numerNew = numerPrevPlusC;
                     }
-                    c *= cOdd;
-                    numerNew = x * numer + numerPrev + c;
+                    else
+                    {
+                        if (i > 1)
+                        {
+                            if (rIsMinus1)
+                                cOdd *= xPlusy2 / i;
+                            else
+                                cOdd *= (i - 1) * omr2;
+                        }
+                        c *= cOdd;
+                        numerNew = x * numer + numerPrev + c;
+                    }
                     denomNew = x * denom + denomPrev;
                 }
                 else
@@ -2659,16 +2688,12 @@ f = 1/gamma(x+1)-1
                 if (i % 2 == 1)
                 {
                     double result = numer / denom;
-                    Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
+                    //Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
                     if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 10000)
                         throw new Exception($"NormalCdfRatioConFrac2 not converging for x={x:r} y={y:r} r={r:r} scale={scale:r}");
                     if (AreEqual(result, resultPrev))
                         break;
                     resultPrev = result;
-                }
-                else
-                {
-                    //Trace.WriteLine($"iter {i}: c={c:r} cEven={cEven:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
                 }
             }
             return resultPrev;
@@ -3249,11 +3274,10 @@ f = 1/gamma(x+1)-1
         /// <summary>
         /// Computes ((exp(x)-1)/x - 1)/x - 0.5
         /// </summary>
-        /// <param name="x">Any real number from 0 to Inf, or NaN.</param>
+        /// <param name="x">Any real number from -Inf to Inf, or NaN.</param>
         /// <returns>((exp(x)-1)/x - 1)/x - 0.5</returns>
         public static double ExpMinus1RatioMinus1RatioMinusHalf(double x)
         {
-            if (x < 0) throw new ArgumentOutOfRangeException(nameof(x), "x < 0");
             if (Math.Abs(x) < 6e-1)
             {
                 return x * (1.0 / 6 + x * (1.0 / 24 + x * (1.0 / 120 + x * (1.0 / 720 +
