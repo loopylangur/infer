@@ -910,14 +910,20 @@ namespace Microsoft.ML.Probabilistic.Factors
                 {
                     if (upperBound.IsPointMass && upperBound.Point < X.Point)
                     {
-                        return IsPositiveOp.XAverageConditional(false, DoublePlusOp.AAverageConditional(lowerBound, upperBound.Point));
+                        // The constraint reduces to (lowerBound < upperBound), which is (lowerBound - upperBound < 0)
+                        Gaussian shifted_F = DoublePlusOp.AAverageConditional(lowerBound, upperBound.Point);
+                        Gaussian shifted_B = IsPositiveOp.XAverageConditional(false, shifted_F);
+                        return DoublePlusOp.SumAverageConditional(shifted_B, upperBound.Point);
                     }
                     else
                     {
-                        return IsPositiveOp.XAverageConditional(false, DoublePlusOp.AAverageConditional(lowerBound, X.Point));
+                        // The constraint reduces to (lowerBound < X), which is (lowerBound - X < 0)
+                        Gaussian shifted_F = DoublePlusOp.AAverageConditional(lowerBound, X.Point);
+                        Gaussian shifted_B = IsPositiveOp.XAverageConditional(false, shifted_F);
+                        return DoublePlusOp.SumAverageConditional(shifted_B, X.Point);
                     }
                 }
-                bool precisionWasZero = AdjustXPrecision(isBetween, ref X, lowerBound, upperBound, ref logZ, 1e-100);
+                bool precisionWasZero = AdjustXPrecision(isBetween, ref X, lowerBound, upperBound, ref logZ, 1e-0);
                 double yl, yu, r, invSqrtVxl, invSqrtVxu;
                 GetDiffMeanAndVariance(X, lowerBound, upperBound, out yl, out yu, out r, out invSqrtVxl, out invSqrtVxu);
                 bool useLogZRatio = (r > smallR) && (logZ < smallLogZ);
@@ -1093,7 +1099,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                     double c = d_p * r * Math.Exp(logPhiR);
                     betaX += c * (-2 * X.Precision + invSqrtVxl * invSqrtVxl + invSqrtVxu * invSqrtVxu);
                 }
-                Trace.WriteLine($"alphaX={alphaX}, alphaL={alphaL}, alphaU={alphaU}, betaX={betaX}, ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX}, yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX}");
+                //Trace.WriteLine($"yu = {yu} yl = {yl} r = {r} alphaX={alphaX}, alphaL={alphaL}, alphaU={alphaU}, betaX={betaX}, ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX}, yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX}");
                 return GaussianOp.GaussianFromAlphaBeta(X, alphaX, betaX, ForceProper);
             }
             return result;
@@ -1299,12 +1305,12 @@ namespace Microsoft.ML.Probabilistic.Factors
                 else
                     ylInvSqrtVxlPlusAlphaX = invSqrtVxl * intZOverZ + (invSqrtVxlMinusInvSqrtVxu - (1 + r) * invSqrtVxl) / invSqrtVxu * alphaU;
                 //ylInvSqrtVxlPlusAlphaX = -invSqrtVxl / yl;
-                Trace.WriteLine($"ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX} replaces {ylInvSqrtVxlPlusAlphaX2} (intZOverZ = {intZOverZ}, alphaU = {alphaU}, r = {r}, yl = {yl})");
-                //if (double.IsNaN(ylInvSqrtVxlPlusAlphaX)) throw new Exception("ylInvSqrtVxlPlusAlphaX is NaN");
-                // yuInvSqrtVxuMinusAlphaX = yu * invSqrtVxu - alphaX = yu * invSqrtVxu + alphaL
-                // = yu * (invSqrtVxu - invSqrtVxl) + invSqrtVxl*(yu - d_p * Ryuryl / ZRatio)
-                //   yu * invSqrtVxu - alphaX
-                // = yu * invSqrtVxu + alphaL + alphaU
+                //Trace.WriteLine($"ylInvSqrtVxlPlusAlphaX = {ylInvSqrtVxlPlusAlphaX} replaces {ylInvSqrtVxlPlusAlphaX2} (intZOverZ = {intZOverZ}, alphaU = {alphaU}, r = {r}, yl = {yl})");
+                if (double.IsNaN(ylInvSqrtVxlPlusAlphaX)) throw new Exception("ylInvSqrtVxlPlusAlphaX is NaN");
+                // alphaL = -invSqrtVxl * Zx / Z
+                // yuInvSqrtVxuMinusAlphaX
+                // = yu * invSqrtVxu - alphaX
+                // = yu * invSqrtVxu + alphaU + alphaL
                 // = invSqrtVxu * (yu + Zy / Z) - invSqrtVxl * Zx / Z
                 // = invSqrtVxu * (yu + Zy / Z - Zx / Z) - (invSqrtVxl - invSqrtVxu) * Zx / Z
                 //   yu + Zy / Z - Zx / Z 
@@ -1314,11 +1320,12 @@ namespace Microsoft.ML.Probabilistic.Factors
                 double yuInvSqrtVxuMinusAlphaX2 = yuInvSqrtVxuMinusAlphaX;
                 double intZ2OverZ = MMath.NormalCdfIntegralRatio(yu, yl, r);
                 if (r == 0)
-                    yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ - alphaL;
+                    yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ + alphaL;
                 else
-                    yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ - (invSqrtVxlMinusInvSqrtVxu + (1 + r) * invSqrtVxu) / invSqrtVxl * alphaL;
-                Trace.WriteLine($"yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX} replaces {yuInvSqrtVxuMinusAlphaX2} (intZ2OverZ = {intZ2OverZ}, alphaL = {alphaL})");
-                //if (double.IsNaN(yuInvSqrtVxuMinusAlphaX)) throw new Exception("yuInvSqrtVxuMinusAlphaX is NaN");
+                    yuInvSqrtVxuMinusAlphaX = invSqrtVxu * intZ2OverZ + (invSqrtVxlMinusInvSqrtVxu + (1 + r) * invSqrtVxu) / invSqrtVxl * alphaL;
+                //Trace.WriteLine($"yuInvSqrtVxuMinusAlphaX = {yuInvSqrtVxuMinusAlphaX} replaces {yuInvSqrtVxuMinusAlphaX2} (intZ2OverZ = {intZ2OverZ}, alphaL = {alphaL})");
+                //if (Math.Abs(yuInvSqrtVxuMinusAlphaX - yuInvSqrtVxuMinusAlphaX2) > 1e-2) throw new Exception();
+                if (double.IsNaN(yuInvSqrtVxuMinusAlphaX)) throw new Exception("yuInvSqrtVxuMinusAlphaX is NaN");
             }
             // TODO: make this case smoothly blend into the X.IsPointMass case
             if (string.Empty.Length > 0)//(r == -1 || (!Double.IsInfinity(yl) && !Double.IsInfinity(yu) && logZ == MMath.NormalCdfLn(yl, yu, -1)))
