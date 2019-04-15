@@ -85,6 +85,7 @@ namespace TestApp
             //new SpecialFunctionsTests().NormalCdf2Test2();
             new SpecialFunctionsTests().NormalCdf2Test();
             //new SpecialFunctionsTests().NormalCdfIntegralTest();
+            //new OperatorTests().GaussianIsBetweenCRRR_NegativeUpperBoundTest();
             //new OperatorTests().GaussianIsBetweenCRRR_SmallXPrecisionTest();
             //new OperatorTests().GaussianIsBetweenCRRR_IsMonotonicInX2();
             //new OperatorTests().GaussianIsBetweenTest2();
