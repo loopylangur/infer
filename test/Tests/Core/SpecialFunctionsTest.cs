@@ -2052,7 +2052,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
 
             double[,] normalcdfIntegral_pairs = new double[,]
                 {
-                    { -0.94102098773740084, -1.2461486442846208, 0.5240076921033775, 1 },
+                    { -0.94102098773740084, -1.2461486442846208, 0.5240076921033775, 0.035369263379357981 },
                     { 0.89626183425208061, -0.94178051490858161, -0.77953292732402091, 0.03003800734061967 },
                     { 1.144658872358864, -1.2215859551105948, -0.81617290357740435, 0.017564280718115784 },
                     { double.PositiveInfinity, -0.40225579098340325, -0.4697418841876283, double.PositiveInfinity },
@@ -2118,7 +2118,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             double r = -1;
             y = -2499147.006377392;
             x = 2499147.273918618;
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 200; i++)
             {
                 //x = 2.1 * (i + 1);
                 //y = -2 * (i + 1);
@@ -2139,43 +2139,26 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 x = -824.43680216388009;
                 y = -23300.713731480908;
                 r = -0.99915764591723821;
+                x = -0.94102098773740084;
+                x = -0.1;
+                y = -1.2461486442846208;
+                r = -1 + i*0.01;
 
                 Trace.WriteLine($"(x,y,r) = {x:r}, {y:r}, {r:r}");
                 double intZ0 = NormalCdfIntegralBasic(x, y, r);
-                double intZ = MMath.NormalCdfIntegral(x, y, r);
+                double intZ;
+                try
+                {
+                     intZ = MMath.NormalCdfIntegral(x, y, r);
+                } catch
+                {
+                    intZ = double.NaN;
+                }
                 //double intZ = intZ0;
                 Trace.WriteLine($"intZ = {intZ} {intZ0}");
                 if (intZ < 0) throw new Exception();
                 double Z = MMath.NormalCdf(x, y, r);
                 if (Z < 0) throw new Exception();
-                double logZ = MMath.NormalCdfLn(x, y, r);
-                //logZ = System.Math.Log(Z);
-                double omr2 = (1 + r) * (1 - r);
-                double logCommon;
-                if (y > x)
-                {
-                    double ymrx = (y - r * x) / System.Math.Sqrt(omr2);
-                    logCommon = Gaussian.GetLogProb(System.Math.Min(x, 0), 0, 1) + Gaussian.GetLogProb(System.Math.Min(ymrx, 0), 0, 1);
-                }
-                else
-                {
-                    double xmry = (x - r * y) / System.Math.Sqrt(omr2);
-                    logCommon = Gaussian.GetLogProb(System.Math.Min(y, 0), 0, 1) + Gaussian.GetLogProb(x - r * y, 0, omr2);
-                }
-                double intZOverZ0 = intZ * System.Math.Exp(-logZ);
-                double intZOverZ = MMath.NormalCdfIntegralRatio(x, y, r);
-                //double intZOverZ = intZOverZ0;
-                Trace.WriteLine($"intZOverZ = {intZOverZ} {intZOverZ0} Z = {Z} {System.Math.Exp(logZ)} common = {System.Math.Exp(logCommon)}");
-                // after 29000 iters: 1.04062139616797E-09
-                //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1) / MMath.NormalCdf(x, y, -1));
-                // after 25000 iters: 1.04062147440396E-09
-                //Console.WriteLine(MMath.NormalCdfIntegralRatio(x, y, -1));
-                //Console.WriteLine(MMath.NormalCdfIntegralRatio(x, -y, -1));
-                //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, y, -1));
-                //Console.WriteLine(MMath.NormalCdfIntegralRatio(y, x, -1));
-                //Console.WriteLine(MMath.NormalCdfIntegral(-x, -y, -1) / MMath.NormalCdf(-x, -y, -1));
-                //Console.WriteLine(MMath.NormalCdfIntegral(x, y, -1)/MMath.NormalCdf(x, y, -1));
-                //Console.WriteLine(MMath.NormalCdfIntegralRatio(-x, -y, -1));
             }
         }
 

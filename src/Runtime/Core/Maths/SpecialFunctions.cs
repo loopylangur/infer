@@ -2827,7 +2827,7 @@ f = 1/gamma(x+1)-1
                 }
                 return result;
             }
-            if ((x >= 0 && r >= 0) || (x > -1 && Math.Abs(r) < 0.5))
+            if ((x >= 0 && r >= 0) || (x > -1 && Math.Abs(r) < 0.9))
             {
                 double result = x * NormalCdf(x, y, r, out exponent);
                 double omr2 = 1 - r * r;
