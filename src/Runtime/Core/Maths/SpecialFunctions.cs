@@ -2185,15 +2185,15 @@ f = 1/gamma(x+1)-1
                 exponent = exponentX;
                 return x;
             }
-            else if (double.IsInfinity(x)) throw new ArgumentOutOfRangeException(nameof(x), x, "x is infinite");
-            else if (double.IsInfinity(y)) throw new ArgumentOutOfRangeException(nameof(y), y, "y is infinite");
             else if (exponentY > exponentX)
             {
+                if (double.IsInfinity(x)) throw new ArgumentOutOfRangeException(nameof(x), x, "x is infinite");
                 exponent = exponentY;
                 return x * Math.Exp(exponentX - exponentY) + y;
             }
             else
             {
+                if (double.IsInfinity(y)) throw new ArgumentOutOfRangeException(nameof(y), y, "y is infinite");
                 exponent = exponentX;
                 return x + y * Math.Exp(exponentY - exponentX);
             }
@@ -2854,7 +2854,7 @@ f = 1/gamma(x+1)-1
             double logProbX = Gaussian.GetLogProb(x, 0, 1);
             double logProbY = Gaussian.GetLogProb(y, 0, 1);
             double xmry0 = x - r * y;
-            if (xmry0 > 1e-2 || (r > -0.999 && xmry0 > 0))
+            if (xmry0 > 0.2)
             {
                 // ensure x-ry <= 0 
                 if (y > -x)
@@ -2930,7 +2930,7 @@ f = 1/gamma(x+1)-1
                     double logProb = Gaussian.GetLogProb(ymrx, 0, 1);
                     scale = Math.Exp(logProb);
                 }
-                if (x < -1)
+                if (x < -2)
                 {
                     return NormalCdfRatioConFrac(x, y, r, scale, true);
                 }
