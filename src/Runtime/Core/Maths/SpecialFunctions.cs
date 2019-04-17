@@ -2541,12 +2541,12 @@ f = 1/gamma(x+1)-1
         private static double NormalCdfRatioConFracNumer(double x, double y, double r, double scale, double sqrtomr2, double xmry, double Rxmry)
         {
             if (double.IsInfinity(Rxmry)) throw new ArgumentOutOfRangeException(nameof(Rxmry), Rxmry, "Rxmry is infinite");
-            double delta = AreEqual(x,y) ? 0 : (1 + r) * (y - x) / sqrtomr2;
+            double delta = AreEqual(x, y) ? 0 : (1 + r) * (y - x) / sqrtomr2;
             double numer;
             if (Math.Abs(delta) > 0.5)
             {
                 numer = scale * r * Rxmry;
-                double ymrx = AreEqual(y,r*x) ? 0 : (y - r * x) / sqrtomr2;
+                double ymrx = AreEqual(y, r * x) ? 0 : (y - r * x) / sqrtomr2;
                 if (scale == 1)
                     numer += MMath.NormalCdfRatio(ymrx);
                 else // this assumes scale = N((y-rx)/sqrt(1-r^2);0,1)
@@ -2633,7 +2633,7 @@ f = 1/gamma(x+1)-1
             }
             else
             {
-                double xmry = AreEqual(x,r*y) ? 0 : (x - r * y) / sqrtomr2;
+                double xmry = AreEqual(x, r * y) ? 0 : (x - r * y) / sqrtomr2;
                 RxmryIter = NormalCdfMomentRatioSequence(0, xmry);
                 RxmryIter.MoveNext();
                 double Rxmry = RxmryIter.Current;
@@ -2658,16 +2658,20 @@ f = 1/gamma(x+1)-1
                         double R2ymrx = NormalCdfMomentRatio(2, ymrx) * 2;
                         double R1xmry = NormalCdfMomentRatio(1, xmry);
                         double R2xmry = NormalCdfMomentRatio(2, xmry) * 2;
+                        double R3xmry = NormalCdfMomentRatio(3, xmry) * 6;
                         double u2 = R1ymrx / ymrx + r * R1xmry / xmry;
                         double q = 1 / (ymrx * ymrx * ymrx) + r / (xmry * xmry * xmry);
                         q = (xmry * xmry * xmry + r * ymrx * ymrx * ymrx) / (ymrx * ymrx * ymrx * xmry * xmry * xmry);
-                        q = ((x*x*x - 3*x*x*r*y + 3*x*r*r*y*y - r*r*r*y*y*y) + r * (y*y*y - 3*y*y*r*x + 3*y*r*r*x*x - r*r*r*x*x*x)) / (ymrx * ymrx * ymrx * xmry * xmry * xmry * omr2 * sqrtomr2);
-                        q = ((1 - r*r*r*r)*x * x * x - 3 * x * x * r * y*(1-r*r) + r * y * y * y*(1-r*r)) / (ymrx * ymrx * ymrx * xmry * xmry * xmry * omr2 * sqrtomr2);
-                        double u = (R2ymrx + (- R1ymrx) / ymrx) / (ymrx *ymrx) + r * (R2xmry + (- R1xmry) / xmry) / (xmry *xmry) + q;
+                        q = ((x * x * x - 3 * x * x * r * y + 3 * x * r * r * y * y - r * r * r * y * y * y) + r * (y * y * y - 3 * y * y * r * x + 3 * y * r * r * x * x - r * r * r * x * x * x)) / (ymrx * ymrx * ymrx * xmry * xmry * xmry * omr2 * sqrtomr2);
+                        q = ((1 - r * r * r * r) * x * x * x - 3 * x * x * r * y * (1 - r * r) + r * y * y * y * (1 - r * r)) / (ymrx * ymrx * ymrx * xmry * xmry * xmry * omr2 * sqrtomr2);
+                        double u = (R2ymrx + (-R1ymrx) / ymrx) / (ymrx * ymrx) + r * (R2xmry + (-R1xmry) / xmry) / (xmry * xmry) + q;
                         numerPrevPlusC = scale * (omr2 * x * x / xmry / xmry / ymrx - u + r * x * sqrtomr2 * (R2xmry - R1xmry / xmry) / xmry);
                         double numerPrevPlusC2 = -numer + scale * r * sqrtomr2 * R1xmry * x;
                         //Trace.WriteLine($"numerPrevPlusC = {numerPrevPlusC:r} {numerPrevPlusC2:r} u = {u:r} {u2:r}");
                         useNumerPrevPlusC = omr2 * x * x > 100;
+                        double numer4 = (x * x + 3) * numerPrevPlusC + x * x * r * omr2 * R2xmry + x * r * sqrtomr2 * omr2 * R3xmry;
+                        double denom4 = x * x * x * x + 6 * x * x + 3;
+                        Trace.WriteLine($"numer4/denom4={-numer4/denom4}");
                     }
                 }
             }
@@ -2677,6 +2681,7 @@ f = 1/gamma(x+1)-1
                 numerPrev = -numer;
                 numer = 0;
             }
+            double numerPrev0 = numerPrev;
             double denom = -x;
             double denomPrev = -1;
             double resultPrev = 0;
@@ -2695,7 +2700,7 @@ f = 1/gamma(x+1)-1
                 cOdd = cEven * sqrtomr2;
             }
             double xPlusy2 = xPlusy * xPlusy;
-            for (int i = 1; i <= 10001; i++)
+            for (int i = 1; i <= 1001; i++)
             {
                 double numerNew, denomNew;
                 double c;
@@ -2748,8 +2753,8 @@ f = 1/gamma(x+1)-1
                 if (i % 2 == 1)
                 {
                     double result = numer / denom;
-                    //Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
-                    if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 10000)
+                    Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
+                    if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 1000)
                         throw new Exception($"NormalCdfRatioConFrac2 not converging for x={x:r} y={y:r} r={r:r} scale={scale:r}");
                     if (AreEqual(result, resultPrev))
                         break;
@@ -2841,13 +2846,13 @@ f = 1/gamma(x+1)-1
             }
             double omr2 = (1 + r) * (1 - r);
             double sqrtomr2 = Math.Sqrt(omr2);
-            double xmry = AreEqual(x,r*y) ? 0 : (x - r * y) / sqrtomr2;
+            double xmry = AreEqual(x, r * y) ? 0 : (x - r * y) / sqrtomr2;
             double logProbX = Gaussian.GetLogProb(x, 0, 1);
             double logProbY = Gaussian.GetLogProb(y, 0, 1);
             if ((x >= 0 && r >= 0) || (x > -1.2 && r > -0.9))
             {
                 double result = x * NormalCdf(x, y, r, out exponent);
-                double ymrx = AreEqual(y,r*x) ? 0 : (y - r * x) / sqrtomr2;
+                double ymrx = AreEqual(y, r * x) ? 0 : (y - r * x) / sqrtomr2;
                 if (ymrx < 0 && xmry < 0)
                 {
                     double exponent2;
@@ -2938,7 +2943,7 @@ f = 1/gamma(x+1)-1
                 }
                 exponent = logProbX;
                 double scale;
-                double ymrx = AreEqual(y,r*x) ? 0 : (y - r * x) / sqrtomr2;
+                double ymrx = AreEqual(y, r * x) ? 0 : (y - r * x) / sqrtomr2;
                 if (ymrx < 0)
                 {
                     // since phi(ymrx) will be small, we factor N(ymrx;0,1) out of the confrac

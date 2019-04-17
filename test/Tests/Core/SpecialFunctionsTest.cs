@@ -2150,11 +2150,13 @@ exp(x*x/4)*pcfu(0.5+n,-x)
 
                 x = 0.021034851174404436;
                 y = -0.37961242087533614;
-                r = -0.999999997317639;
+                //y += x;
+                //x -= x;
                 r = -1 + System.Math.Pow(10, -i);
 
                 Trace.WriteLine($"(x,y,r) = {x:r}, {y:r}, {r:r}");
                 double intZ0 = NormalCdfIntegralBasic(x, y, r);
+                double intZ1 = NormalCdfIntegralFlip(x, y, r);
                 double intZ;
                 try
                 {
@@ -2164,11 +2166,30 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     intZ = double.NaN;
                 }
                 //double intZ = intZ0;
-                Trace.WriteLine($"intZ = {intZ} {intZ0}");
+                Trace.WriteLine($"intZ = {intZ} {intZ0} {intZ1}");
                 if (intZ < 0) throw new Exception();
                 double Z = MMath.NormalCdf(x, y, r);
                 if (Z < 0) throw new Exception();
             }
+        }
+
+        private double NormalCdfIntegralFlip(double x, double y, double r)
+        {
+            double logProbX = Gaussian.GetLogProb(x, 0, 1);
+            return -MMath.NormalCdfIntegral(x, -y, -r) + x * MMath.NormalCdf(x) + System.Math.Exp(logProbX);
+        }
+
+        private double NormalCdfIntegralTaylor(double x, double y, double r)
+        {
+            double omr2 = 1 - r * r;
+            double sqrtomr2 = System.Math.Sqrt(omr2);
+            double ymrx = y / sqrtomr2;
+            double dx0 = MMath.NormalCdf(0, y, r);
+            double ddx0 = System.Math.Exp(Gaussian.GetLogProb(0, 0, 1) + MMath.NormalCdfLn(ymrx));
+            // \phi_{xx} &= -x \phi_x - r \phi_r
+            double dddx0 = -r * System.Math.Exp(Gaussian.GetLogProb(0, 0, 1) + Gaussian.GetLogProb(ymrx, 0, 1));
+            Trace.WriteLine($"dx0 = {dx0} {ddx0} {dddx0}");
+            return MMath.NormalCdfIntegral(0, y, r) + x * dx0 + 0.5 * x * x * ddx0 + 1.0 / 6 * x * x * x * dddx0;
         }
 
         private double NormalCdfIntegralBasic(double x, double y, double r)
