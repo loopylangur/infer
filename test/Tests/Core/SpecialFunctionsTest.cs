@@ -1775,15 +1775,15 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             MMath.NormalCdf(-2, -2, -0.5);
             NormalCdf_Quadrature(-2, -2, -0.5);
             Stopwatch watch = new Stopwatch();
-            double xmin = -2;
-            double xmax = 2;
+            double xmin = -1;
+            double xmax = -0.6;
             double n = 20;
             double xinc = (xmax - xmin) / (n - 1);
             for (int xi = 0; xi < n; xi++)
             {
                 if (xinc == 0 && xi > 0) break;
                 double x = xmin + xi * xinc;
-                double ymin = -System.Math.Abs(x);
+                double ymin = -System.Math.Abs(x)*10;
                 double ymax = -ymin;
                 double yinc = (ymax - ymin) / (n - 1);
                 for (int yi = 0; yi < n; yi++)
@@ -1791,8 +1791,8 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     double y = ymin + yi * yinc;
                     double rmin = -0.999999;
                     double rmax = -0.000001;
-                    rmin = -1;
-                    rmax = 1;
+                    rmin = MMath.NextDouble(-1);
+                    rmax = -1+1e-15;
                     //rmax = 0.1;
                     //rmax = -0.58;
                     double rinc = (rmax - rmin) / (n - 1);
@@ -2053,6 +2053,9 @@ exp(x*x/4)*pcfu(0.5+n,-x)
 
             double[,] normalcdfIntegral_pairs = new double[,]
                 {
+                    { -1, -8.9473684210526319,-0.999999999999999, 0 },
+                    { 19.073484197181429, -19.073488459566978, -0.99999999999996048, 4.3734961413937625E-147 },
+                    { -0.4999, 0.5, -0.9999, 1.7769677765819788E-05 },
                     { 0.021034851174404436, -0.37961242087533614, -0.999999997317639, 0 },
                     { -0.013170888687821042, 0.013170891631143039, -1, 1.7278974097756908E-18 },
                     { -2, -2, 1, 0.008490702616829637 },
@@ -2062,7 +2065,6 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     { 0.89626183425208061, -0.94178051490858161, -0.77953292732402091, 0.03003800734061967 },
                     { 1.144658872358864, -1.2215859551105948, -0.81617290357740435, 0.017564280718115784 },
                     { double.PositiveInfinity, -0.40225579098340325, -0.4697418841876283, double.PositiveInfinity },
-                    { 19.073484197181429, -19.073488459566978, -0.99999999999996048, 4.3734961413937625E-147 },
                     { -1.08E+31, 790.80368892437889, -0.94587440643473975, 0 },
                     { -1.081776354231671E+31, 790.80368892437889, -0.94587440643473975, 0 },
                     { 790.80368892437889, -108177636171.16806, -0.94587440643473975, 0 },
@@ -2080,7 +2082,6 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     { 50, 0.5, -1, 34.221057736936238 }, // 461
                     { 5, 0.5, -1, 3.1052470330674216 }, // 77
                     { 0.5, 0.5, -1, 0.19146246127401312 }, // 29
-                    { -0.4999, 0.5, -0.9999, 1.7769677765819788E-05 },
                     { -0.4999, 0.5, -1, 1.7603559714981849E-09 },
                     { -0.499, 0.5, -1, 1.7606199115326087E-07 },
                     { -0.49, 0.5, -1, 1.7632494692370611E-05 },
@@ -2123,7 +2124,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             double r = -1;
             y = -2499147.006377392;
             x = 2499147.273918618;
-            for (int i = 0; i < 200; i++)
+            for (int i = 0; i < 1; i++)
             {
                 //x = 2.1 * (i + 1);
                 //y = -2 * (i + 1);
@@ -2144,30 +2145,47 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 y = -23300.713731480908;
                 r = -0.99915764591723821;
                 x = -0.94102098773740084;
-                x = 1 + i*0.01;
+                x = 1 + i * 0.01;
                 y = 2;
                 r = 1;
 
                 x = 0.021034851174404436;
                 y = -0.37961242087533614;
-                //y += x;
-                //x -= x;
+                //x = -0.02;
+                //y += -1;
+                //x -= -1;
                 r = -1 + System.Math.Pow(10, -i);
+
+                x = i * 0.01;
+                y = -1;
+                r = -1 + 1e-8;
+
+                // 1.81377005549484E-40 with exponent
+                // flipped is 1.70330340479022E-40
+                y = -1;
+                x = -8.9473684210526319;
+                r = -0.999999999999999;
 
                 Trace.WriteLine($"(x,y,r) = {x:r}, {y:r}, {r:r}");
                 double intZ0 = NormalCdfIntegralBasic(x, y, r);
-                double intZ1 = NormalCdfIntegralFlip(x, y, r);
+                double intZ1 = 0; // NormalCdfIntegralFlip(x, y, r);
+                double intZr = 0;// NormalCdfIntegralBasic2(x, y, r);
                 double intZ;
+                double exponent;
                 try
                 {
-                     intZ = MMath.NormalCdfIntegral(x, y, r);
-                } catch
+                    intZ = MMath.NormalCdfIntegral(x, y, r, out exponent);
+                }
+                catch
                 {
                     intZ = double.NaN;
+                    exponent = double.NaN;
                 }
                 //double intZ = intZ0;
-                Trace.WriteLine($"intZ = {intZ} {intZ0} {intZ1}");
+                Trace.WriteLine($"intZ = {intZ} {intZ*System.Math.Exp(exponent)} {intZ0} {intZ1} {intZr}");
                 if (intZ < 0) throw new Exception();
+                //double intZ2 = NormalCdfIntegralBasic(y, x, r);
+                //Trace.WriteLine($"intZ2 = {intZ2} {r*intZ}");
                 double Z = MMath.NormalCdf(x, y, r);
                 if (Z < 0) throw new Exception();
             }
@@ -2192,6 +2210,50 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             return MMath.NormalCdfIntegral(0, y, r) + x * dx0 + 0.5 * x * x * ddx0 + 1.0 / 6 * x * x * x * dddx0;
         }
 
+        private double NormalCdfIntegralBasic2(double x, double y, double r)
+        {
+            double omr2 = 1 - r * r;
+            double sqrtomr2 = System.Math.Sqrt(omr2);
+            double ymrx = (y - r * x) / sqrtomr2;
+            double xmry = (x - r * y) / sqrtomr2;
+            double func(double t)
+            {
+                return (y - r * x + r * t) * System.Math.Exp(Gaussian.GetLogProb(t, x, 1) + MMath.NormalCdfLn(ymrx + r * t / sqrtomr2));
+            }
+            func(0);
+            double func2(double t)
+            {
+                double ymrxt = ymrx + r * t / sqrtomr2;
+                return sqrtomr2 * System.Math.Exp(Gaussian.GetLogProb(t, x, 1) + Gaussian.GetLogProb(ymrxt, 0, 1)) * (MMath.NormalCdfMomentRatio(1, ymrxt) - 1);
+            }
+            func2(0);
+            //return -MMath.NormalCdf(x, y, r) * (y / r - x) + Integrate(func2) / r;
+            double func3(double t)
+            {
+                double xmryt = xmry + r * t / sqrtomr2;
+                return sqrtomr2 * System.Math.Exp(Gaussian.GetLogProb(t, y, 1) + Gaussian.GetLogProb(xmryt, 0, 1)) * MMath.NormalCdfMomentRatio(1, xmryt);
+            }
+            //double Z = MMath.NormalCdf(x, y, r, out double exponent);
+            double Z3 = Integrate(func3);
+            //return System.Math.Exp(exponent)*(-Z * (y / r - x) - omr2 / r * MMath.NormalCdfRatio(xmry)) + Z3/r;
+            return Z3;
+        }
+
+        private static double Integrate(Func<double, double> func)
+        {
+            double sum = 0;
+            var ts = EpTests.linspace(0, 1, 100000);
+            double inc = ts[1] - ts[0];
+            for (int i = 0; i < ts.Length; i++)
+            {
+                double t = ts[i];
+                double term = func(t);
+                if (i == 0 || i == ts.Length - 1) term /= 2;
+                sum += term * inc;
+            }
+            return sum;
+        }
+
         private double NormalCdfIntegralBasic(double x, double y, double r)
         {
             double omr2 = 1 - r * r;
@@ -2203,7 +2265,10 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             // what about x > y > 0?
             //double t = MMath.NormalCdfIntegral(-x, y, -r) + x * MMath.NormalCdf(y) + r * System.Math.Exp(Gaussian.GetLogProb(y, 0, 1));
             //Console.WriteLine(t);
-            return x * MMath.NormalCdf(x, y, r) + System.Math.Exp(Gaussian.GetLogProb(x, 0, 1) + MMath.NormalCdfLn(ymrx)) + r * System.Math.Exp(Gaussian.GetLogProb(y, 0, 1) + MMath.NormalCdfLn(xmry));
+            double phix = System.Math.Exp(Gaussian.GetLogProb(x, 0, 1) + MMath.NormalCdfLn(ymrx));
+            double phiy = System.Math.Exp(Gaussian.GetLogProb(y, 0, 1) + MMath.NormalCdfLn(xmry));
+            //Trace.WriteLine($"phix = {phix} phiy = {phiy}");
+            return x * MMath.NormalCdf(x, y, r) + phix + r * phiy;
             //return y * MMath.NormalCdf(x, y, r) + r * System.Math.Exp(Gaussian.GetLogProb(x, 0, 1) + MMath.NormalCdfLn(ymrx)) + System.Math.Exp(Gaussian.GetLogProb(y, 0, 1) + MMath.NormalCdfLn(xmry));
         }
 

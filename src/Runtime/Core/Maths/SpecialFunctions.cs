@@ -2667,11 +2667,12 @@ f = 1/gamma(x+1)-1
                         double u = (R2ymrx + (-R1ymrx) / ymrx) / (ymrx * ymrx) + r * (R2xmry + (-R1xmry) / xmry) / (xmry * xmry) + q;
                         numerPrevPlusC = scale * (omr2 * x * x / xmry / xmry / ymrx - u + r * x * sqrtomr2 * (R2xmry - R1xmry / xmry) / xmry);
                         double numerPrevPlusC2 = -numer + scale * r * sqrtomr2 * R1xmry * x;
-                        //Trace.WriteLine($"numerPrevPlusC = {numerPrevPlusC:r} {numerPrevPlusC2:r} u = {u:r} {u2:r}");
+                        Trace.WriteLine($"numerPrevPlusC = {numerPrevPlusC:r} {numerPrevPlusC2:r} u = {u:r} {u2:r}");
                         useNumerPrevPlusC = omr2 * x * x > 100;
-                        double numer4 = (x * x + 3) * numerPrevPlusC + x * x * r * omr2 * R2xmry + x * r * sqrtomr2 * omr2 * R3xmry;
-                        double denom4 = x * x * x * x + 6 * x * x + 3;
-                        Trace.WriteLine($"numer4/denom4={-numer4/denom4}");
+                        useNumerPrevPlusC = true;
+                        //double numer4 = (x * x + 3) * numerPrevPlusC + x * x * r * omr2 * R2xmry + x * r * sqrtomr2 * omr2 * R3xmry;
+                        //double denom4 = -x * x * x * x - 6 * x * x - 3;
+                        //Trace.WriteLine($"numer4/denom4={numer4/denom4}");
                     }
                 }
             }
@@ -2681,7 +2682,6 @@ f = 1/gamma(x+1)-1
                 numerPrev = -numer;
                 numer = 0;
             }
-            double numerPrev0 = numerPrev;
             double denom = -x;
             double denomPrev = -1;
             double resultPrev = 0;
@@ -2732,6 +2732,7 @@ f = 1/gamma(x+1)-1
                                 cOdd *= (i - 1) * omr2;
                         }
                         c *= cOdd;
+                        Trace.WriteLine($"numerPrev = {numerPrev} c = {c}");
                         numerNew = x * numer + numerPrev + c;
                     }
                     denomNew = x * denom + denomPrev;
@@ -2849,11 +2850,11 @@ f = 1/gamma(x+1)-1
             double xmry = AreEqual(x, r * y) ? 0 : (x - r * y) / sqrtomr2;
             double logProbX = Gaussian.GetLogProb(x, 0, 1);
             double logProbY = Gaussian.GetLogProb(y, 0, 1);
-            if ((x >= 0 && r >= 0) || (x > -1.2 && r > -0.9))
+            if ((x >= 0 && r >= 0) /*|| (x > -1.2 && 1+r > 1e-12)*/)
             {
                 double result = x * NormalCdf(x, y, r, out exponent);
                 double ymrx = AreEqual(y, r * x) ? 0 : (y - r * x) / sqrtomr2;
-                if (ymrx < 0 && xmry < 0)
+                if (ymrx < 0.1 && xmry < 0.1)
                 {
                     double exponent2;
                     if (Math.Abs(x) >= Math.Abs(y))
