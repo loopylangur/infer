@@ -2559,6 +2559,8 @@ f = 1/gamma(x+1)-1
             return numer;
         }
 
+        public static bool UseNumer2, UseNumer3, UseNumer4, TraceConFrac2;
+
         /// <summary>
         /// Returns NormalCdf divided by N(x;0,1) N((y-rx)/sqrt(1-r^2);0,1), multiplied by scale.
         /// If r == -1, then divides by N(min(x,y);0,1) instead.
@@ -2593,6 +2595,7 @@ f = 1/gamma(x+1)-1
             double probYScaled;
             bool useNumerPrevPlusC = false;
             double numerPrevPlusC = double.NaN;
+            double numer3 = double.NaN;
             double numer4 = double.NaN;
             if (rIsMinus1)
             {
@@ -2641,11 +2644,11 @@ f = 1/gamma(x+1)-1
                 numer = NormalCdfRatioConFracNumer(x, y, r, scale, sqrtomr2, xmry, Rxmry);
                 probYScaled = 1;
                 Trace.WriteLine($"xmry = {xmry}");
-                if (integral && (xmry < 0 || r < -0.99 || true))
+                if (integral && (xmry < 0 || r < -0.99))
                 {
-                    double ymrx = (y - r * x) / sqrtomr2;
+                    double ymrx = AreEqual(y, r * x) ? 0 : (y - r * x) / sqrtomr2;
                     Trace.WriteLine($"ymrx = {ymrx}");
-                    if ((ymrx < 0 || r < -0.99 || true))
+                    if ((ymrx < 0 || r < -0.99))
                     {
                         // numerPrev = scale * (-R(ymrx) -r*R(xmry))
                         //           = scale * ((1-R1(ymrx))/ymrx + r*(1-R1(xmry))/xmry)
@@ -2669,6 +2672,7 @@ f = 1/gamma(x+1)-1
                         double c2 = 0.5 * delta * delta + (1 + r);
                         double c3 = NormalCdfRatioDiff(xmry, delta, 3) * delta * delta;
                         numerPrevPlusC = scale * (c1 * R1xmry - c2 * R2xmry - c3);
+                        numer3 = scale / 3 * x * (c1 * R1xmry - c2 * R2xmry - c3 + r * omr2 * R2xmry);
                         numer4 = scale / 3 * ((3 + x * x) * c1 * R1xmry + x * r * sqrtomr2 * omr2 * R3xmry - (3 * c2 + x * x * (c2 - r * omr2)) * R2xmry - (3 + x * x) * c3);
                         //Trace.WriteLine($"numerPrevPlusC = {numerPrevPlusC:r} numer4 = {numer4:r}");
                         useNumerPrevPlusC = omr2 * x * x > 100;
@@ -2682,8 +2686,8 @@ f = 1/gamma(x+1)-1
                 numerPrev = -numer;
                 numer = 0;
             }
-            double denom = -x;
-            double denomPrev = -1;
+            double denom = 0;
+            double denomPrev = 0;
             double resultPrev = 0;
             // This confrac converges faster as r -> -1
             double cOdd, cEven;
@@ -2717,28 +2721,32 @@ f = 1/gamma(x+1)-1
                 if (integral) c *= x;
                 if (i % 2 == 1)
                 {
-                    if (i == 1 && useNumerPrevPlusC)
+                    if (i > 1)
+                    {
+                        if (rIsMinus1)
+                            cOdd *= xPlusy2 / i;
+                        else
+                            cOdd *= (i - 1) * omr2;
+                    }
+                    if (i == 1 && useNumerPrevPlusC && UseNumer2)
                     {
                         // numer==0 when i==1
                         numerNew = numerPrevPlusC;
                     }
-                    else if(i == 3 && useNumerPrevPlusC)
+                    else if (i == 3 && useNumerPrevPlusC && UseNumer4)
                     {
                         numerNew = numer4;
                     }
                     else
                     {
-                        if (i > 1)
-                        {
-                            if (rIsMinus1)
-                                cOdd *= xPlusy2 / i;
-                            else
-                                cOdd *= (i - 1) * omr2;
-                        }
                         c *= cOdd;
-                        numerNew = x * numer + numerPrev + c;
+                        numerNew = x * numer + c + numerPrev;
+                        if (i == 1 && useNumerPrevPlusC && TraceConFrac2)
+                            Trace.WriteLine($"numer2 = {numerPrevPlusC:r} {numerNew:r}");
+                        else if (i == 3 && useNumerPrevPlusC && TraceConFrac2)
+                            Trace.WriteLine($"numer4 = {numer4:r} {numerNew:r}");
                     }
-                    denomNew = x * denom + denomPrev;
+                    denomNew = x * denom + denomPrev - x*x;
                 }
                 else
                 {
@@ -2746,8 +2754,17 @@ f = 1/gamma(x+1)-1
                         cEven *= xPlusy2 / (i - 1);
                     else
                         cEven *= i * omr2;
-                    c *= cEven;
-                    numerNew = (x * numer + i * numerPrev + c) / (i + 1);
+                    if (i == 2 && useNumerPrevPlusC && UseNumer3)
+                    {
+                        numerNew = numer3;
+                    }
+                    else
+                    {
+                        c *= cEven;
+                        numerNew = (x * numer + c + i * numerPrev) / (i + 1);
+                        if (i == 2 && useNumerPrevPlusC && TraceConFrac2)
+                            Trace.WriteLine($"numer3 = {numer3:r} {numerNew:r}");
+                    }
                     denomNew = (x * denom + i * denomPrev) / (i + 1);
                 }
                 numerPrev = numer;
@@ -2756,8 +2773,9 @@ f = 1/gamma(x+1)-1
                 denom = denomNew;
                 if (i % 2 == 1)
                 {
-                    double result = numer / denom;
-                    //Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
+                    double result = numer / (denom - 1);
+                    if (TraceConFrac2)
+                        Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
                     if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 1000)
                         throw new Exception($"NormalCdfRatioConFrac2 not converging for x={x:r} y={y:r} r={r:r} scale={scale:r}");
                     if (AreEqual(result, resultPrev))
@@ -2853,7 +2871,7 @@ f = 1/gamma(x+1)-1
             double xmry = AreEqual(x, r * y) ? 0 : (x - r * y) / sqrtomr2;
             double logProbX = Gaussian.GetLogProb(x, 0, 1);
             double logProbY = Gaussian.GetLogProb(y, 0, 1);
-            if ((x >= 0 && r >= 0) /*|| (x > -1.2 && 1+r > 1e-12)*/)
+            if ((x >= 0 && r >= 0) || (x > -1.2 && 1+r > 1e-12))
             {
                 double result = x * NormalCdf(x, y, r, out exponent);
                 double ymrx = AreEqual(y, r * x) ? 0 : (y - r * x) / sqrtomr2;
