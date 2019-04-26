@@ -1776,7 +1776,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             NormalCdf_Quadrature(-2, -2, -0.5);
             Stopwatch watch = new Stopwatch();
             double xmin = -1;
-            double xmax = -0.6;
+            double xmax = 1;
             double n = 20;
             double xinc = (xmax - xmin) / (n - 1);
             for (int xi = 0; xi < n; xi++)
@@ -1792,7 +1792,8 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     double rmin = -0.999999;
                     double rmax = -0.000001;
                     rmin = MMath.NextDouble(-1);
-                    rmax = -1+1e-15;
+                    rmax = -1+1e-10;
+                    rmax = -0.5;
                     //rmax = 0.1;
                     //rmax = -0.58;
                     double rinc = (rmax - rmin) / (n - 1);
@@ -2054,7 +2055,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             double[,] normalcdfIntegral_pairs = new double[,]
                 {
                     { -1, -8.9473684210526319,-0.999999999999999, 0 },
-                    { 19.073484197181429, -19.073488459566978, -0.99999999999996048, 4.3734961413937625E-147 },
+                    { 19.073484197181429, -19.073488459566978, -0.99999999999996048, 4.3734946165528797E-147 },
                     { -0.4999, 0.5, -0.9999, 1.7769677765819788E-05 },
                     { 0.021034851174404436, -0.37961242087533614, -0.999999997317639, 0 },
                     { -0.013170888687821042, 0.013170891631143039, -1, 1.7278974097756908E-18 },
@@ -2124,7 +2125,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
             double r = -1;
             y = -2499147.006377392;
             x = 2499147.273918618;
-            for (int i = 0; i < 1; i++)
+            for (int i = 1; i < 10; i++)
             {
                 //x = 2.1 * (i + 1);
                 //y = -2 * (i + 1);
@@ -2156,15 +2157,17 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                 //x -= -1;
                 r = -1 + System.Math.Pow(10, -i);
 
-                x = i * 0.01;
-                y = -1;
-                r = -1 + 1e-8;
+                //x = i * 0.01;
+                //y = -1;
+                //r = -1 + 1e-8;
 
                 // 1.81377005549484E-40 with exponent
                 // flipped is 1.70330340479022E-40
-                y = -1;
-                x = -8.9473684210526319;
-                r = -0.999999999999999;
+                //x = -1;
+                //y = -8.9473684210526319;
+                //x = System.Math.Pow(10, -i);
+                //y = x;
+                //r = -0.999999999999999;
 
                 Trace.WriteLine($"(x,y,r) = {x:r}, {y:r}, {r:r}");
                 double intZ0 = NormalCdfIntegralBasic(x, y, r);
@@ -2182,7 +2185,7 @@ exp(x*x/4)*pcfu(0.5+n,-x)
                     exponent = double.NaN;
                 }
                 //double intZ = intZ0;
-                Trace.WriteLine($"intZ = {intZ} {intZ*System.Math.Exp(exponent)} {intZ0} {intZ1} {intZr}");
+                Trace.WriteLine($"intZ = {intZ:r} {intZ*System.Math.Exp(exponent):r} {intZ0:r} {intZ1:r} {intZr:r}");
                 if (intZ < 0) throw new Exception();
                 //double intZ2 = NormalCdfIntegralBasic(y, x, r);
                 //Trace.WriteLine($"intZ2 = {intZ2} {r*intZ}");

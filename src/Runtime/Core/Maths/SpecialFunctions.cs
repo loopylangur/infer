@@ -2593,6 +2593,7 @@ f = 1/gamma(x+1)-1
             double probYScaled;
             bool useNumerPrevPlusC = false;
             double numerPrevPlusC = double.NaN;
+            double numer4 = double.NaN;
             if (rIsMinus1)
             {
                 // numer = probYScaled * scale * (N(x;0,1) - N(y;0,1))/N(y;0,1)
@@ -2639,10 +2640,12 @@ f = 1/gamma(x+1)-1
                 double Rxmry = RxmryIter.Current;
                 numer = NormalCdfRatioConFracNumer(x, y, r, scale, sqrtomr2, xmry, Rxmry);
                 probYScaled = 1;
-                if (integral && xmry < -1)
+                Trace.WriteLine($"xmry = {xmry}");
+                if (integral && (xmry < 0 || r < -0.99 || true))
                 {
                     double ymrx = (y - r * x) / sqrtomr2;
-                    if (ymrx < -1)
+                    Trace.WriteLine($"ymrx = {ymrx}");
+                    if ((ymrx < 0 || r < -0.99 || true))
                     {
                         // numerPrev = scale * (-R(ymrx) -r*R(xmry))
                         //           = scale * ((1-R1(ymrx))/ymrx + r*(1-R1(xmry))/xmry)
@@ -2659,20 +2662,17 @@ f = 1/gamma(x+1)-1
                         double R1xmry = NormalCdfMomentRatio(1, xmry);
                         double R2xmry = NormalCdfMomentRatio(2, xmry) * 2;
                         double R3xmry = NormalCdfMomentRatio(3, xmry) * 6;
-                        double u2 = R1ymrx / ymrx + r * R1xmry / xmry;
-                        double q = 1 / (ymrx * ymrx * ymrx) + r / (xmry * xmry * xmry);
-                        q = (xmry * xmry * xmry + r * ymrx * ymrx * ymrx) / (ymrx * ymrx * ymrx * xmry * xmry * xmry);
-                        q = ((x * x * x - 3 * x * x * r * y + 3 * x * r * r * y * y - r * r * r * y * y * y) + r * (y * y * y - 3 * y * y * r * x + 3 * y * r * r * x * x - r * r * r * x * x * x)) / (ymrx * ymrx * ymrx * xmry * xmry * xmry * omr2 * sqrtomr2);
-                        q = ((1 - r * r * r * r) * x * x * x - 3 * x * x * r * y * (1 - r * r) + r * y * y * y * (1 - r * r)) / (ymrx * ymrx * ymrx * xmry * xmry * xmry * omr2 * sqrtomr2);
-                        double u = (R2ymrx + (-R1ymrx) / ymrx) / (ymrx * ymrx) + r * (R2xmry + (-R1xmry) / xmry) / (xmry * xmry) + q;
-                        numerPrevPlusC = scale * (omr2 * x * x / xmry / xmry / ymrx - u + r * x * sqrtomr2 * (R2xmry - R1xmry / xmry) / xmry);
-                        double numerPrevPlusC2 = -numer + scale * r * sqrtomr2 * R1xmry * x;
-                        Trace.WriteLine($"numerPrevPlusC = {numerPrevPlusC:r} {numerPrevPlusC2:r} u = {u:r} {u2:r}");
+                        double delta = AreEqual(x, y) ? 0 : (1 + r) * (y - x) / sqrtomr2;
+                        //double numerPrevPlusC2 = -numer + scale * r * sqrtomr2 * R1xmry * x;
+                        double c1 = (1 + r) * (1 + r) / sqrtomr2 * ((2 - r) * x - y);
+                        // these parentheses would be a good test for a floating-point error localizer
+                        double c2 = 0.5 * delta * delta + (1 + r);
+                        double c3 = NormalCdfRatioDiff(xmry, delta, 3) * delta * delta;
+                        numerPrevPlusC = scale * (c1 * R1xmry - c2 * R2xmry - c3);
+                        numer4 = scale / 3 * ((3 + x * x) * c1 * R1xmry + x * r * sqrtomr2 * omr2 * R3xmry - (3 * c2 + x * x * (c2 - r * omr2)) * R2xmry - (3 + x * x) * c3);
+                        //Trace.WriteLine($"numerPrevPlusC = {numerPrevPlusC:r} numer4 = {numer4:r}");
                         useNumerPrevPlusC = omr2 * x * x > 100;
                         useNumerPrevPlusC = true;
-                        //double numer4 = (x * x + 3) * numerPrevPlusC + x * x * r * omr2 * R2xmry + x * r * sqrtomr2 * omr2 * R3xmry;
-                        //double denom4 = -x * x * x * x - 6 * x * x - 3;
-                        //Trace.WriteLine($"numer4/denom4={numer4/denom4}");
                     }
                 }
             }
@@ -2722,6 +2722,10 @@ f = 1/gamma(x+1)-1
                         // numer==0 when i==1
                         numerNew = numerPrevPlusC;
                     }
+                    else if(i == 3 && useNumerPrevPlusC)
+                    {
+                        numerNew = numer4;
+                    }
                     else
                     {
                         if (i > 1)
@@ -2732,7 +2736,6 @@ f = 1/gamma(x+1)-1
                                 cOdd *= (i - 1) * omr2;
                         }
                         c *= cOdd;
-                        Trace.WriteLine($"numerPrev = {numerPrev} c = {c}");
                         numerNew = x * numer + numerPrev + c;
                     }
                     denomNew = x * denom + denomPrev;
@@ -2754,7 +2757,7 @@ f = 1/gamma(x+1)-1
                 if (i % 2 == 1)
                 {
                     double result = numer / denom;
-                    Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
+                    //Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
                     if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 1000)
                         throw new Exception($"NormalCdfRatioConFrac2 not converging for x={x:r} y={y:r} r={r:r} scale={scale:r}");
                     if (AreEqual(result, resultPrev))
