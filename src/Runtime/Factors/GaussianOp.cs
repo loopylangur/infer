@@ -2064,7 +2064,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                             dlogfss = dlogfs(x, m, v);
                             double c1 = 0.5 * x * x2 * (dlogfss[1] - a / x2);
                             double c2 = (dlogfss[0] + a / x - b) + c1 / x2;
-                            if (c1 < 0 && c2 < 0)
+                            if (c1 < 0 && c2 < 0 && c1 > double.MinValue && c2 > double.MinValue)
                             {
                                 x = Math.Sqrt(c1 / c2);
                                 found = true;
@@ -2125,7 +2125,7 @@ namespace Microsoft.ML.Probabilistic.Factors
                 }
                 if (double.IsNaN(x))
                     throw new Exception("x is nan");
-                //Console.WriteLine("{0}: {1}", iter, x);
+                //System.Diagnostics.Trace.WriteLine($"{iter}: {x}");
                 if (MMath.AbsDiff(oldx, x, 1e-10) < 1e-10)
                 {
                     x = QReinitialize(sample, mean, precision, x);

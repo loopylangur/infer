@@ -81,15 +81,19 @@ namespace TestApp
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
+            //MMath.TraceConFrac2 = true;
+            //MMath.UseNumer2 = true;
+            //MMath.UseNumer3 = true;
+            //MMath.UseNumer4 = true;
             //new SpecialFunctionsTests().SpecialFunctionsTest();
             //new SpecialFunctionsTests().NormalCdf2Test2();
             //new SpecialFunctionsTests().NormalCdf2Test();
-            //new SpecialFunctionsTests().NormalCdfIntegralTest();
+            new SpecialFunctionsTests().NormalCdfIntegralTest();
             //new OperatorTests().GaussianIsBetweenCRRR_NegativeUpperBoundTest();
             //new OperatorTests().GaussianIsBetweenCRRR_SmallXPrecisionTest();
             //new OperatorTests().GaussianIsBetweenCRRR_IsMonotonicInX2();
             //new OperatorTests().GaussianIsBetweenTest2();
-            new GaussianOpTests().GaussianOp_Laplace_Q_Test();
+            //new GaussianOpTests().GaussianOp_Laplace_Q_Test();
 
             if (false)
             {

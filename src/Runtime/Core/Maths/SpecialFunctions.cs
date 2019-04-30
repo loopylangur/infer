@@ -2610,10 +2610,17 @@ f = 1/gamma(x+1)-1
                     if (integral && delta > -1)
                     {
                         // Avoid cancellation in numerPrev + C  = C - numer
+                        // exp(delta)-1 + x*(x+y)
+                        // = exp(delta)-1-delta + (x+y)*((y-x)/2 + x)
+                        // = exp(delta)-1-delta + (x+y)*(y+x)/2
                         double expMinus1RatioMinus1RatioMinusHalf = MMath.ExpMinus1RatioMinus1RatioMinusHalf(delta);
                         double expMinus1RatioMinus1 = delta * (0.5 + expMinus1RatioMinus1RatioMinusHalf);
                         numerPrevPlusC = -scale * (delta * expMinus1RatioMinus1 + xPlusy * xPlusy / 2);
-                        useNumerPrevPlusC = true;
+                        // delta + (x+y)^2 + x*(x+y) = (x+y)*((y-x)/2 + x+y+x) = (x+y)*(x+y)*3/2
+                        numer3 = -scale * (x/3 * delta * expMinus1RatioMinus1 + x * xPlusy*xPlusy/2);
+                        // (x+y)^2*(x*(x+y) + 3/2 + 3/2*x^2)
+                        numer4 = -scale/3 * ((x * x + 3) * delta * expMinus1RatioMinus1 + xPlusy*xPlusy*(x * x *3 / 2 + 3.0 / 2 + x * xPlusy));
+                        //useNumerPrevPlusC = true;
                     }
                 }
                 else
@@ -2630,7 +2637,7 @@ f = 1/gamma(x+1)-1
                         double expMinus1RatioMinus1RatioMinusHalf = MMath.ExpMinus1RatioMinus1RatioMinusHalf(delta);
                         double expMinus1RatioMinus1 = delta * (0.5 + expMinus1RatioMinus1RatioMinusHalf);
                         numerPrevPlusC = -scale * (-delta * expMinus1RatioMinus1 + xPlusy * (xPlusy / 2 + x * probYScaledMinus1));
-                        useNumerPrevPlusC = true;
+                        //useNumerPrevPlusC = true;
                     }
                 }
                 RxmryIter = null;
@@ -2711,6 +2718,8 @@ f = 1/gamma(x+1)-1
                 // cOdd = xPlusy^i / i!! for odd i
                 // cEven = xPlusy^i / (i-1)!! for even i
                 cOdd = cEven * xPlusy;
+                if(!useNumerPrevPlusC)
+                    numerPrev = 0;
             }
             else
             {
@@ -2751,6 +2760,20 @@ f = 1/gamma(x+1)-1
                     {
                         numerNew = numer4;
                     }
+                    else if(rIsMinus1 && !useNumerPrevPlusC)
+                    {
+                        if (i == 1)
+                            numerNew = 0;
+                        else
+                        {
+                            c *= cOdd;
+                            numerNew = x * numer + c + numerPrev + numerPrevPlusC * x * x;
+                            if (i == 1 && useNumerPrevPlusC && TraceConFrac2)
+                                Trace.WriteLine($"numer2 = {numerPrevPlusC:r} {numerNew:r}");
+                            else if (i == 3 && useNumerPrevPlusC && TraceConFrac2)
+                                Trace.WriteLine($"numer4 = {numer4:r} {numerNew:r}");
+                        }
+                    }
                     else
                     {
                         c *= cOdd;
@@ -2788,8 +2811,9 @@ f = 1/gamma(x+1)-1
                 if (i % 2 == 1)
                 {
                     double result = numer / (denom - 1);
+                    if (rIsMinus1 && !useNumerPrevPlusC) result = (numer + numerPrevPlusC) / (denom - 1);
                     if (TraceConFrac2)
-                        Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} denom={denom:r} numerPrev={numerPrev:r}");
+                        Trace.WriteLine($"iter {i}: result={result:r} c={c:r} cOdd={cOdd:r} numer={numer:r} {numer+numerPrevPlusC:r} denom={denom:r} numerPrev={numerPrev:r} {numerPrev + numerPrevPlusC*x:r}");
                     if ((result > double.MaxValue) || double.IsNaN(result) || result < 0 || i >= 1000)
                         throw new Exception($"NormalCdfRatioConFrac2 not converging for x={x:r} y={y:r} r={r:r} scale={scale:r}");
                     if (AreEqual(result, resultPrev))

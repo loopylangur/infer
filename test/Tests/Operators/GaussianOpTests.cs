@@ -222,11 +222,12 @@ namespace Microsoft.ML.Probabilistic.Tests
         [Fact]
         public void GaussianOp_Laplace_Q_Test()
         {
-            Gaussian sample = Gaussian.FromNatural(-2.7232954231713977, 0.074308384738968308);
-            Gaussian mean = Gaussian.FromNatural(5.3861033232682936E-79, 2.901010900892175E-157);
+            Gaussian sample = Gaussian.FromNatural(5.3861033232682936E-79, 2.901010900892175E-157);
+            Gaussian mean = Gaussian.FromNatural(-2.7232954231713977, 0.074308384738968308);
             Gamma precision = Gamma.FromShapeAndRate(656.04827139518625, 1.4379651227587877E+159);
-            Gamma q = Gamma.FromShapeAndRate(656.21634269445883, 1.4381676460642411E+159);
-            GaussianOp_Laplace.Q(sample, mean, precision, q);
+            Gamma q = Gamma.FromShapeAndRate(1.1680712992725464, 2.0252330545334344E+155);
+            // Fails in 32-bit
+            GaussianOp.MeanAverageConditional(sample, mean, precision, q);
         }
 
         [Fact]
